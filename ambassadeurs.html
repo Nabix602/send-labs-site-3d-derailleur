@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambassadeurs – SendLabs</title>
+<meta name="description" content="Deviens ambassadeur SendLabs : partage ton code, fais découvrir nos protections et gagne des récompenses.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="wrap">
+  <div class="hero">
+    <h1>Deviens ambassadeur <span>SendLabs</span></h1>
+    <p class="lead">Partage ton code, fais découvrir nos protections et gagne des récompenses.</p>
+    <a class="btn" href="#inscription">Je m'inscris</a>
+  </div>
+
+  <section class="block">
+    <h2>Comment ça marche</h2>
+    <div class="feat">
+      <div><strong>1. Inscris-toi</strong><span>Tu reçois ton code personnel.</span></div>
+      <div><strong>2. Partage</strong><span>Ton code en bio, en story ou en vidéo.</span></div>
+      <div><strong>3. Gagne des points</strong><span>Chaque achat déclaré avec ton code te rapporte des points.</span></div>
+    </div>
+  </section>
+
+  <section class="block prose">
+    <h2>Tes points</h2>
+    <p>Tu gagnes <strong>10 points par euro</strong> dépensé par un acheteur qui indique ton code via la page « Ta surprise » (le QR code glissé dans chaque colis).</p>
+    <table>
+      <tr><th>Points</th><th>Récompense</th></tr>
+      <tr><td>300</td><td>Stickers SendLabs</td></tr>
+      <tr><td>1 000</td><td>Un protège offert</td></tr>
+      <tr><td>2 500</td><td>Le garde-boue offert</td></tr>
+      <tr><td>5 000</td><td>Un pack complet</td></tr>
+    </table>
+    <h2>Statuts</h2>
+    <div class="grid">
+      <div class="card"><div class="body"><h3>Bronze</h3><p>10 points par euro dès l'inscription.</p></div></div>
+      <div class="card"><div class="body"><h3>Argent</h3><p>12 points par euro dès 2 000 points cumulés.</p></div></div>
+      <div class="card"><div class="body"><h3>Or</h3><p>15 points par euro dès 6 000 points cumulés.</p></div></div>
+    </div>
+  </section>
+
+  <section class="block" id="inscription">
+    <h2>Inscription ambassadeur</h2>
+    <form name="ambassadeur" method="POST" action="merci.html" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="ambassadeur">
+      <p hidden><label>Ne pas remplir <input name="bot-field"></label></p>
+      <label>Prénom ou pseudo<input name="pseudo" required></label>
+      <label>Lien de ton compte (Instagram, TikTok…)<input name="compte" required></label>
+      <label>E-mail<input type="email" name="email" required></label>
+      <label class="check"><input type="checkbox" name="reglement" required> J'ai lu et j'accepte le <a href="#reglement" style="color:var(--accent)">règlement du programme</a>.</label>
+      <button class="btn" type="submit">Envoyer ma demande</button>
+    </form>
+  </section>
+
+  <section class="block prose">
+    <h2>FAQ ambassadeurs</h2>
+    <details><summary>Comment obtenir mon code ?</summary><p>Après ton inscription, on te l'envoie par e-mail.</p></details>
+    <details><summary>Comment mes points sont-ils comptés ?</summary><p>Chaque acheteur déclare ton code sur la page « Ta surprise ». On vérifie la vente, puis on crédite tes points.</p></details>
+    <details><summary>Quand et comment je reçois ma récompense ?</summary><p>Dès que tu atteins un palier, contacte-nous : on t'envoie ta récompense par colis.</p></details>
+    <details><summary>Les points expirent-ils ?</summary><p>À définir dans le règlement (par exemple après 12 mois sans activité).</p></details>
+  </section>
+
+  <section class="block prose" id="reglement">
+    <h2>Règlement du programme ambassadeur</h2>
+    <div class="notice">Modèle à compléter et à faire relire avant publication.</div>
+    <ul>
+      <li><strong>Objet :</strong> le programme récompense les personnes qui font connaître les produits <span data-brand></span> grâce à un code personnel.</li>
+      <li><strong>Points :</strong> 10 points par euro dépensé par un acheteur ayant déclaré le code (taux selon le statut). Les points n'ont aucune valeur monétaire et ne sont ni remboursables ni échangeables contre de l'argent.</li>
+      <li><strong>Validation :</strong> les points sont crédités après vérification de la vente. Les achats annulés ou retournés ne donnent pas de points.</li>
+      <li><strong>Transparence :</strong> l'ambassadeur doit indiquer clairement le caractère promotionnel de ses publications (par exemple « #collab » ou « #partenariat »).</li>
+      <li><strong>Fraude :</strong> auto-parrainage ou fausses déclarations entraînent la suppression des points et l'exclusion du programme.</li>
+      <li><strong>Modification :</strong> <span data-brand></span> peut modifier ou arrêter le programme, avec information préalable des ambassadeurs.</li>
+      <li><strong>Contact :</strong> <a data-email style="color:var(--accent)" href="#"></a></li>
+    </ul>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="data.js"></script>
+<script src="layout.js"></script>
+</body>
+</html>

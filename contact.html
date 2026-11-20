@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact – SendLabs</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<main class="wrap">
+  <div class="page-title"><h1>Contact</h1><p>Question, compatibilité, ou envie d'être prévenu pour le garde-boue ?</p></div>
+  <section class="block">
+    <form name="contact" method="POST" action="merci.html" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="contact">
+      <p hidden><label>Ne pas remplir <input name="bot-field"></label></p>
+      <label>Nom ou pseudo<input name="nom" required></label>
+      <label>E-mail<input type="email" name="email" required></label>
+      <label>Sujet
+        <select name="sujet">
+          <option>Question sur un produit</option>
+          <option>Me prévenir pour le garde-boue</option>
+          <option>Autre</option>
+        </select>
+      </label>
+      <label>Message<textarea name="message" rows="5" required></textarea></label>
+      <label class="check"><input type="checkbox" name="consentement" required> J'accepte que mes données soient utilisées pour répondre à ma demande (voir la <a href="confidentialite.html" style="color:var(--accent)">politique de confidentialité</a>).</label>
+      <button class="btn" type="submit">Envoyer</button>
+    </form>
+    <p style="text-align:center;color:var(--muted);margin-top:24px">Ou par e-mail : <a data-email style="color:var(--accent)" href="#"></a></p>
+  </section>
+</main>
+<footer id="site-footer"></footer>
+<script src="data.js"></script>
+<script src="layout.js"></script>
+</body>
+</html>
