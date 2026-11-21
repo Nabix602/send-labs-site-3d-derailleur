@@ -71,15 +71,13 @@
   }
 
   /* ---------- En-tête et pied de page ---------- */
-  var LOGO = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 33 L19 6 L24 15 L11 35 Z" fill="#b9f000"/><path d="M19 6 L37 33 L28 35 L19 19 Z" fill="#b9f000" opacity=".7"/></svg>';
-
   function renderChrome() {
     var h = document.getElementById("site-header");
     if (h) {
       h.className = "site";
       h.innerHTML = '<div class="announce" id="announce"></div><div class="wrap hdr">' +
         '<div><button class="burger" id="burger" aria-label="Ouvrir le menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>' +
-        '<a class="logo" href="index.html" aria-label="SendLabs">' + LOGO + '<span>SEND<i>LABS</i></span></a>' +
+        '<a class="logo" href="index.html" aria-label="SendLabs, accueil"><img src="logo.png" alt="SendLabs" width="154" height="44"></a>' +
         '<div class="hdr-right"><a class="cart" href="panier.html" aria-label="Panier"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/></svg><span class="count" id="cart-count"></span></a>' +
         '<a class="pill-btn" id="auth-link" href="connexion.html">Se connecter</a></div></div>';
 
