@@ -144,8 +144,10 @@
         if (!p) { view().innerHTML = notice("Produit introuvable."); return; }
         document.title = p.name + " – SendLabs";
         var u = S.safeUrl(p.image_url);
+        var ext = p.status === "published" ? S.extUrl(p.external_url) : "";
         var buy = (p.is_drop && !drop.live)
           ? '<a class="btn" href="drop.html">Voir le drop</a>'
+          : ext ? S.extBtn(ext)
           : (p.status === "soon" || p.price_cents == null)
             ? '<a class="btn" href="contact.html">Être prévenu</a>'
             : '<button class="btn" data-add="' + esc(p.id) + '">Ajouter au panier</button>';

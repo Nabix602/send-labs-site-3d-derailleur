@@ -11,6 +11,8 @@
   }
   function money(c) { return (c / 100).toFixed(2).replace(".", ",") + " €"; }
   function dateFr(s) { return new Date(s).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }); }
+  function extUrl(u) { return /^https:\/\/[^\s<>"]+$/.test(u || "") ? u : ""; }
+  function extBtn(u, cls) { return '<a class="btn' + (cls ? " " + cls : "") + '" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">Acheter</a>'; }
   function safeUrl(u) { return /^(https:\/\/|photos\/|\/)/.test(u || "") ? u : ""; }
 
   /* ---------- Panier (localStorage avec repli en mémoire) ---------- */
@@ -54,7 +56,8 @@
   function productCard(p) {
     var u = safeUrl(p.image_url);
     var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0));
-    var buy = (p.status === "soon" || p.price_cents == null)
+    var ext = p.status === "published" ? extUrl(p.external_url) : "";
+    var buy = ext ? extBtn(ext, "small") : (p.status === "soon" || p.price_cents == null)
       ? '<a class="btn small ghost" href="contact.html">Être prévenu</a>'
       : '<button class="btn small" data-add="' + esc(p.id) + '">Ajouter · ' + money(p.price_cents) + '</button>';
     return '<article class="card"><a class="img" href="produit.html?p=' + esc(p.slug) + '">' + img + '</a><div class="body">' +
@@ -241,7 +244,7 @@
   document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + (C.email || ""); a.textContent = C.email || ""; });
 
   window.SLapp = {
-    sb: sb, esc: esc, money: money, dateFr: dateFr, safeUrl: safeUrl,
+    sb: sb, esc: esc, money: money, dateFr: dateFr, safeUrl: safeUrl, extUrl: extUrl, extBtn: extBtn,
     readCart: readCart, writeCart: writeCart, loadProducts: loadProducts,
     productCard: productCard, giftCard: giftCard, loadDrop: loadDrop, dropCard: dropCard
   };

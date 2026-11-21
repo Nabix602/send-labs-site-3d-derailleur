@@ -61,7 +61,13 @@
             '<label>Ordre d\'affichage<input data-f="sort" inputmode="numeric" value="' + esc(p.sort_order) + '"></label>' +
             '<label>Type<select data-f="kind">' + opt("product", "Produit", p.kind) + opt("gift_card", "Carte cadeau", p.kind) + "</select></label></div>" +
             '<label>Accroche<input data-f="tagline" value="' + esc(p.tagline || "") + '"></label>' +
-            '<label>Image (adresse https:// ou photos/nom.jpg)<input data-f="image" value="' + esc(p.image_url || "") + '"></label>' +
+            '<div class="photo-box"><strong>Photo principale</strong>' +
+            (p.image_url ? '<div><img src="' + esc(S.safeUrl(p.image_url)) + '" alt="" style="max-height:110px;border-radius:10px;margin:6px 0"></div>' : '<p style="margin:4px 0;color:var(--muted);font-size:.85rem">Aucune photo.</p>') +
+            '<input type="file" data-photo-file accept="image/jpeg,image/png,image/webp" style="max-width:100%">' +
+            '<div style="margin-top:8px"><button class="btn small" type="button" data-action="upload-photo">Envoyer la photo</button></div>' +
+            '<p style="color:var(--muted);font-size:.8rem;margin-top:6px">JPG, PNG ou WebP, 5 Mo maximum. Ou collez une adresse ci-dessous.</p></div>' +
+            '<label>Adresse de l\'image (https:// ou photos/nom.jpg)<input data-f="image" value="' + esc(p.image_url || "") + '"></label>' +
+            '<label>Lien d\'achat externe, ex. annonce Vinted (https://…). S\'il est rempli, le bouton « Acheter » ouvre ce lien au lieu du panier. Vide = panier du site.<input data-f="external" inputmode="url" value="' + esc(p.external_url || "") + '"></label>' +
             '<label>Description<textarea data-f="description" rows="3">' + esc(p.description || "") + "</textarea></label>" +
             '<div class="model-box" data-slug="' + esc(p.slug) + '" data-model="' + esc(p.model_path || "") + '"><strong>Modèle 3D (.stl)</strong>' +
             '<p style="margin:4px 0;color:var(--muted);font-size:.85rem">' + (p.model_path ? "Modèle en ligne : " + esc(p.model_path) : "Aucun modèle : la fiche n'affiche pas d'onglet « Vue 3D ».") + "</p>" +
@@ -154,10 +160,13 @@
     function f(n) { return panel.querySelector('[data-f="' + n + '"]'); }
     var price = toCents(f("price").value), stock = toInt(f("stock").value), sort = toInt(f("sort").value);
     if (price === undefined || stock === undefined || sort === undefined) return null;
+    var ext = f("external").value.trim();
+    if (ext && !/^https:\/\/[^\s<>"]+$/.test(ext)) return null;
     return {
       name: f("name").value.trim(), price_cents: price, stock: stock, sort_order: sort === null ? 0 : sort,
       status: f("status").value, kind: f("kind").value, tagline: f("tagline").value.trim(),
-      image_url: f("image").value.trim() || null, description: f("description").value.trim()
+      image_url: f("image").value.trim() || null, description: f("description").value.trim(),
+      external_url: ext || null
     };
   }
 
@@ -174,8 +183,26 @@
         sb.from("orders").update({ status: st }).eq("id", id).then(function (r) { flash(r.error ? "Mise à jour impossible." : "Statut enregistré.", !r.error); });
       } else if (act === "save-product") {
         var panel = a.closest("[data-pid]"), data = readProduct(panel);
-        if (!data || !data.name) { flash("Vérifiez les champs (nom, prix, stock, ordre)."); return; }
+        if (!data || !data.name) { flash("Vérifiez les champs (nom, prix, stock, ordre, lien d'achat en https://)."); return; }
         sb.from("products").update(data).eq("id", panel.getAttribute("data-pid")).then(function (r) { flash(r.error ? "Enregistrement impossible." : "Produit enregistré.", !r.error); });
+      } else if (act === "upload-photo") {
+        var pbox = a.closest(".photo-box"), ppid = a.closest("[data-pid]").getAttribute("data-pid");
+        var img = pbox.querySelector("[data-photo-file]").files[0];
+        var slug = a.closest("[data-pid]").querySelector("[data-slug]").getAttribute("data-slug").toLowerCase().replace(/[^a-z0-9-]/g, "");
+        if (!img) { flash("Choisissez d'abord une image."); return; }
+        var ext2 = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }[img.type];
+        if (!ext2) { flash("Format accepté : JPG, PNG ou WebP."); return; }
+        if (img.size > 5 * 1024 * 1024) { flash("Image trop lourde (5 Mo maximum)."); return; }
+        var ipath = slug + "-" + Date.now() + "." + ext2;
+        a.disabled = true; flash("Envoi en cours…", true);
+        sb.storage.from("product-images").upload(ipath, img, { contentType: img.type, upsert: false }).then(function (up) {
+          if (up.error) { a.disabled = false; flash("Envoi impossible."); return; }
+          var pub = sb.storage.from("product-images").getPublicUrl(ipath).data.publicUrl;
+          return sb.from("products").update({ image_url: pub }).eq("id", ppid).then(function (r) {
+            if (r.error) { a.disabled = false; flash("Enregistrement impossible."); return; }
+            show("products"); flash("Photo enregistrée.", true);
+          });
+        });
       } else if (act === "upload-model" || act === "remove-model") {
         var box = a.closest(".model-box"), pid = a.closest("[data-pid]").getAttribute("data-pid");
         var oldPath = box.getAttribute("data-model");
