@@ -70,6 +70,50 @@
       '</p><button class="btn small' + (pop ? '' : ' ghost') + '" data-add="' + esc(p.id) + '">Choisir ' + eur + ' €</button></div></article>';
   }
 
+  /* ---------- Drop (série limitée, activable depuis l'admin) ---------- */
+  var DROP_KEYS = ["drop_enabled", "drop_title", "drop_description", "drop_starts_at", "drop_ends_at"];
+  var dropPromise = null;
+  function parseDate(v) {
+    if (!v) return null;
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function loadDrop() {
+    if (!dropPromise) {
+      dropPromise = sb.from("site_settings").select("key,value").in("key", DROP_KEYS).then(function (r) {
+        var m = {};
+        (r.data || []).forEach(function (x) { m[x.key] = x.value; });
+        var now = new Date();
+        var start = parseDate(m.drop_starts_at), end = parseDate(m.drop_ends_at);
+        var enabled = m.drop_enabled === "1";
+        var ended = !!(enabled && end && now >= end);
+        var upcoming = !!(enabled && !ended && start && now < start);
+        return {
+          enabled: enabled && !ended, title: m.drop_title || "Drop", description: m.drop_description || "",
+          start: start, end: end, upcoming: upcoming, live: enabled && !ended && !upcoming
+        };
+      }).catch(function () { return { enabled: false, live: false, upcoming: false, title: "", description: "", start: null, end: null }; });
+    }
+    return dropPromise;
+  }
+  function dropCard(p, live) {
+    var u = safeUrl(p.image_url);
+    var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0));
+    var buy = !live
+      ? '<button class="btn small" disabled>Pas encore ouvert</button>'
+      : (p.price_cents == null ? '<a class="btn small ghost" href="contact.html">Être prévenu</a>'
+        : '<button class="btn small" data-add="' + esc(p.id) + '">Ajouter · ' + money(p.price_cents) + '</button>');
+    return '<article class="card"><a class="img" href="produit.html?p=' + esc(p.slug) + '">' + img + '</a><div class="body"><span class="badge">Drop</span>' +
+      '<h3>' + esc(p.name) + '</h3><p>' + esc(p.tagline || "") + '</p><div class="actions">' +
+      '<a class="btn small ghost" href="produit.html?p=' + esc(p.slug) + '">Détails</a>' + buy + '</div></div></article>';
+  }
+  function showDropLink() {
+    loadDrop().then(function (d) {
+      var a = document.getElementById("drawer-drop");
+      if (a && d.enabled) a.style.display = "block";
+    });
+  }
+
   /* ---------- En-tête et pied de page ---------- */
   function renderChrome() {
     var h = document.getElementById("site-header");
@@ -87,7 +131,7 @@
       drawer.className = "drawer";
       drawer.setAttribute("aria-label", "Menu");
       drawer.innerHTML = '<button class="close" aria-label="Fermer le menu">×</button>' +
-        '<a href="index.html">Accueil</a><a href="boutique.html">Boutique</a><a href="histoire.html">Notre histoire</a>' +
+        '<a href="index.html">Accueil</a><a href="boutique.html">Boutique</a><a href="drop.html" id="drawer-drop" style="display:none;color:#5c8a00">Drop</a><a href="histoire.html">Notre histoire</a>' +
         '<a href="ambassadeurs.html">Ambassadeurs</a><a href="faq.html">FAQ</a><a href="contact.html">Contact</a>' +
         '<a href="connexion.html" id="drawer-auth">Se connecter</a><a href="admin.html" id="drawer-admin" style="display:none">Administration</a>';
       document.body.appendChild(scrim);
@@ -142,9 +186,10 @@
     var b = e.target.closest("[data-add]");
     if (!b) return;
     var key = b.getAttribute("data-add");
-    loadProducts().then(function (list) {
-      var p = list.filter(function (x) { return x.id === key || x.slug === key; })[0];
+    Promise.all([loadProducts(), loadDrop()]).then(function (res) {
+      var p = res[0].filter(function (x) { return x.id === key || x.slug === key; })[0];
       if (!p || p.price_cents == null || p.status !== "published") return;
+      if (p.is_drop && !res[1].live) return; /* la base refuse aussi la commande */
       addToCart(p);
       var old = b.getAttribute("data-label") || b.textContent;
       b.setAttribute("data-label", old);
@@ -182,10 +227,11 @@
   window.SLapp = {
     sb: sb, esc: esc, money: money, dateFr: dateFr, safeUrl: safeUrl,
     readCart: readCart, writeCart: writeCart, loadProducts: loadProducts,
-    productCard: productCard, giftCard: giftCard
+    productCard: productCard, giftCard: giftCard, loadDrop: loadDrop, dropCard: dropCard
   };
 
   renderChrome();
   refreshAuth();
   loadAnnouncement();
+  showDropLink();
 })();

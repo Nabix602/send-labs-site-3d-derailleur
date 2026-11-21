@@ -25,31 +25,90 @@
 
   var pages = {
     home: function () {
-      return S.loadProducts().then(function (list) {
+      return Promise.all([S.loadProducts(), S.loadDrop()]).then(function (res) {
+        var list = res[0], drop = res[1];
         var cage = list.filter(function (p) { return p.slug === "send-cage"; })[0];
         if (cage && cage.price_cents != null) document.getElementById("cage-price").textContent = money(cage.price_cents);
-        document.getElementById("range").innerHTML = list.filter(function (p) { return p.kind === "product" && p.slug !== "send-cage"; }).map(S.productCard).join("");
+        document.getElementById("range").innerHTML = list.filter(function (p) { return p.kind === "product" && p.slug !== "send-cage" && !p.is_drop; }).map(S.productCard).join("");
         document.getElementById("gifts").innerHTML = list.filter(function (p) { return p.kind === "gift_card"; }).map(S.giftCard).join("");
+        var banner = document.getElementById("drop-banner");
+        if (banner && drop.enabled) {
+          var when = drop.upcoming && drop.start ? "Ouverture le " + drop.start.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) : "En cours";
+          banner.innerHTML = '<div class="drop-banner"><div><span class="badge">Drop</span><strong>' + esc(drop.title) + "</strong><span>" + esc(when) +
+            '</span></div><a class="btn small" href="drop.html">' + (drop.live ? "Voir le drop" : "Voir les détails") + "</a></div>";
+        }
       });
     },
 
     shop: function () {
       return S.loadProducts().then(function (list) {
-        document.getElementById("products").innerHTML = list.filter(function (p) { return p.kind === "product"; }).map(S.productCard).join("");
+        document.getElementById("products").innerHTML = list.filter(function (p) { return p.kind === "product" && !p.is_drop; }).map(S.productCard).join("");
         document.getElementById("gifts").innerHTML = list.filter(function (p) { return p.kind === "gift_card"; }).map(S.giftCard).join("");
       });
     },
 
+    drop: function () {
+      return Promise.all([S.loadDrop(), S.loadProducts()]).then(function (res) {
+        var d = res[0], items = res[1].filter(function (p) { return p.is_drop && p.status !== "draft"; });
+        var v = view();
+        if (!d.enabled) {
+          v.innerHTML = notice("Aucun drop en cours pour le moment.") +
+            '<h2 style="margin-top:40px">Être prévenu du prochain drop</h2>' +
+            '<form data-submit="drop" data-success="C\'est noté ! Tu seras prévenu du prochain drop.">' +
+            '<p hidden><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>' +
+            '<label>E-mail<input type="email" name="email" required maxlength="200"></label>' +
+            '<label class="check"><input type="checkbox" name="consentement" value="oui" required> J\'accepte d\'être contacté pour le prochain drop (<a href="confidentialite.html" style="text-decoration:underline">confidentialité</a>).</label>' +
+            '<button class="btn" type="submit">Me prévenir</button></form>';
+          return;
+        }
+        var html = '<span class="eyebrow">Série limitée</span><h2>' + esc(d.title) + "</h2>";
+        if (d.description) html += '<p style="text-align:center;color:var(--muted);max-width:600px;margin:-8px auto 24px">' + esc(d.description) + "</p>";
+        if (d.upcoming && d.start) {
+          html += '<div class="countdown" id="cd" aria-live="polite"></div>' +
+            '<p style="text-align:center;color:var(--muted)">Ouverture le ' + esc(d.start.toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })) + "</p>";
+        } else if (d.end) {
+          html += '<p style="text-align:center;color:var(--muted)">Disponible jusqu\'au ' + esc(d.end.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })) + "</p>";
+        }
+        html += items.length ? '<div class="grid drop-grid" style="margin-top:26px">' + items.map(function (p) { return S.dropCard(p, d.live); }).join("") + "</div>"
+          : notice("Les produits du drop seront dévoilés très bientôt.");
+        if (d.upcoming) {
+          html += '<h2 style="margin-top:50px">Être prévenu à l\'ouverture</h2>' +
+            '<form data-submit="drop" data-success="C\'est noté ! Tu seras prévenu à l\'ouverture du drop.">' +
+            '<p hidden><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>' +
+            '<label>E-mail<input type="email" name="email" required maxlength="200"></label>' +
+            '<label class="check"><input type="checkbox" name="consentement" value="oui" required> J\'accepte d\'être contacté pour ce drop (<a href="confidentialite.html" style="text-decoration:underline">confidentialité</a>).</label>' +
+            '<button class="btn" type="submit">Me prévenir</button></form>';
+        }
+        v.innerHTML = html;
+
+        var cd = document.getElementById("cd");
+        if (cd && d.start) {
+          var tick = function () {
+            var ms = d.start - new Date();
+            if (ms <= 0) { location.reload(); return; }
+            var s = Math.floor(ms / 1000), days = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+            function box(n, l) { return '<div><strong>' + (n < 10 ? "0" + n : n) + "</strong><span>" + l + "</span></div>"; }
+            cd.innerHTML = box(days, "jours") + box(h, "heures") + box(m, "min") + box(sec, "sec");
+          };
+          tick();
+          setInterval(tick, 1000);
+        }
+      });
+    },
+
     product: function () {
-      return S.loadProducts().then(function (list) {
+      return Promise.all([S.loadProducts(), S.loadDrop()]).then(function (res) {
+        var list = res[0], drop = res[1];
         var slug = qs("p");
         var p = list.filter(function (x) { return x.slug === slug; })[0] || list.filter(function (x) { return x.kind === "product"; })[0];
         if (!p) { view().innerHTML = notice("Produit introuvable."); return; }
         document.title = p.name + " – SendLabs";
         var u = S.safeUrl(p.image_url);
-        var buy = (p.status === "soon" || p.price_cents == null)
-          ? '<a class="btn" href="contact.html">Être prévenu</a>'
-          : '<button class="btn" data-add="' + esc(p.id) + '">Ajouter au panier</button>';
+        var buy = (p.is_drop && !drop.live)
+          ? '<a class="btn" href="drop.html">Voir le drop</a>'
+          : (p.status === "soon" || p.price_cents == null)
+            ? '<a class="btn" href="contact.html">Être prévenu</a>'
+            : '<button class="btn" data-add="' + esc(p.id) + '">Ajouter au panier</button>';
         view().innerHTML = '<div class="product-hero"><div class="img">' + (u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '">' : esc(p.name.charAt(0))) +
           "</div><div>" + (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : "") +
           "<h1>" + esc(p.name) + '</h1><p class="tag">' + esc(p.tagline || "") + "</p><p>" + esc(p.description || "") + "</p>" +
@@ -58,12 +117,16 @@
     },
 
     cart: function () {
-      return S.loadProducts().then(function (list) {
+      return Promise.all([S.loadProducts(), S.loadDrop()]).then(function (res) {
+        var list = res[0], drop = res[1];
         var map = {};
         list.forEach(function (p) { map[p.id] = p; });
 
         function lines() {
-          var c = S.readCart().filter(function (i) { return map[i.id] && map[i.id].price_cents != null && map[i.id].status === "published"; });
+          var c = S.readCart().filter(function (i) {
+            var p = map[i.id];
+            return p && p.price_cents != null && p.status === "published" && (!p.is_drop || drop.live);
+          });
           c.forEach(function (i) { i.price = map[i.id].price_cents; i.name = map[i.id].name; });
           S.writeCart(c);
           return c;

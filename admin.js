@@ -25,7 +25,7 @@
   }
 
   function tabsHtml() {
-    var names = { orders: "Commandes", products: "Produits", messages: "Messages", clients: "Clients", settings: "Réglages" };
+    var names = { orders: "Commandes", products: "Produits", drop: "Drop", messages: "Messages", clients: "Clients", settings: "Réglages" };
     return '<div class="tabs">' + Object.keys(names).map(function (k) {
       return '<button data-tab="' + k + '" class="' + (k === tab ? "on" : "") + '">' + names[k] + "</button>";
     }).join("") + '</div><div id="flash"></div><div id="tab-body"></div>';
@@ -75,11 +75,43 @@
       });
     },
 
+    drop: function () {
+      var keys = ["drop_enabled", "drop_title", "drop_description", "drop_starts_at", "drop_ends_at"];
+      return Promise.all([
+        sb.from("site_settings").select("key,value").in("key", keys),
+        sb.from("products").select("id,name,is_drop,status,price_cents").eq("kind", "product").order("sort_order")
+      ]).then(function (res) {
+        if (res[0].error || res[1].error) { body().innerHTML = notice("Lecture impossible."); return; }
+        var m = {};
+        res[0].data.forEach(function (x) { m[x.key] = x.value; });
+        function local(iso) {
+          if (!iso) return "";
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return "";
+          var p = function (n) { return n < 10 ? "0" + n : n; };
+          return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "T" + p(d.getHours()) + ":" + p(d.getMinutes());
+        }
+        var prods = res[1].data.map(function (p) {
+          return '<label class="check"><input type="checkbox" data-drop-product="' + esc(p.id) + '"' + (p.is_drop ? " checked" : "") + "> " + esc(p.name) +
+            (p.price_cents == null ? ' <em style="color:#b42318">(pas de prix)</em>' : "") + (p.status !== "published" ? ' <em style="color:var(--muted)">(' + esc(p.status === "soon" ? "bientôt" : "brouillon") + ", non commandable)</em>" : "") + "</label>";
+        }).join("");
+        body().innerHTML = '<div class="panel"><h3>Page Drop</h3>' +
+          '<p style="color:var(--muted)">Quand le drop est désactivé, la page affiche « aucun drop » avec un formulaire d\'alerte, et le lien disparaît du menu. Les produits cochés ne sont commandables que pendant l\'ouverture du drop (vérifié côté serveur).</p>' +
+          '<form id="drop-form"><label class="check"><input type="checkbox" name="enabled"' + (m.drop_enabled === "1" ? " checked" : "") + "> <strong>Drop activé</strong> (visible sur le site)</label>" +
+          '<label>Titre<input name="title" maxlength="120" value="' + esc(m.drop_title || "") + '"></label>' +
+          '<label>Description<textarea name="description" rows="3" maxlength="400">' + esc(m.drop_description || "") + "</textarea></label>" +
+          '<div class="row2"><label>Ouverture (heure de votre appareil, vide = tout de suite)<input type="datetime-local" name="starts" value="' + esc(local(m.drop_starts_at)) + '"></label>' +
+          '<label>Fermeture (vide = pas de fin)<input type="datetime-local" name="ends" value="' + esc(local(m.drop_ends_at)) + '"></label></div>' +
+          '<div><strong>Produits du drop</strong><div style="display:grid;gap:8px;margin-top:10px">' + (prods || "<em>Aucun produit.</em>") + "</div></div>" +
+          '<button class="btn small" type="submit">Enregistrer le drop</button></form></div>';
+      });
+    },
+
     messages: function () {
       return sb.from("submissions").select("*").order("created_at", { ascending: false }).limit(200).then(function (r) {
         if (r.error) { body().innerHTML = notice("Lecture impossible."); return; }
         if (!r.data.length) { body().innerHTML = notice("Aucun message pour le moment."); return; }
-        var LABEL = { contact: "Contact", ambassadeur: "Ambassadeur", surprise: "Ta surprise" };
+        var LABEL = { contact: "Contact", ambassadeur: "Ambassadeur", surprise: "Ta surprise", drop: "Alerte drop" };
         body().innerHTML = r.data.map(function (m) {
           var fields = Object.keys(m.payload || {}).map(function (k) { return "<strong>" + esc(k) + " :</strong> " + esc(m.payload[k]); }).join("<br>");
           return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span class="status">' + esc(LABEL[m.type] || m.type) + "</span><span>" + esc(S.dateFr(m.created_at)) + "</span></div><p>" + fields +
@@ -161,6 +193,28 @@
           tagline: String(fd.get("tagline") || "").trim(), description: String(fd.get("description") || "").trim(), status: "draft", kind: "product", sort_order: 50
         }).then(function (r) {
           if (r.error) flash("Ajout impossible (adresse courte déjà utilisée ?)."); else show("products");
+        });
+      } else if (e.target.id === "drop-form") {
+        var df = e.target, dd = new FormData(df);
+        var starts = dd.get("starts") ? new Date(dd.get("starts")) : null, ends = dd.get("ends") ? new Date(dd.get("ends")) : null;
+        if (starts && isNaN(starts.getTime()) || ends && isNaN(ends.getTime())) { flash("Dates invalides."); return; }
+        if (starts && ends && ends <= starts) { flash("La fermeture doit être après l'ouverture."); return; }
+        var rows = [
+          { key: "drop_enabled", value: dd.get("enabled") ? "1" : "0" },
+          { key: "drop_title", value: String(dd.get("title") || "").trim() },
+          { key: "drop_description", value: String(dd.get("description") || "").trim() },
+          { key: "drop_starts_at", value: starts ? starts.toISOString() : "" },
+          { key: "drop_ends_at", value: ends ? ends.toISOString() : "" }
+        ];
+        var checks = df.querySelectorAll("[data-drop-product]");
+        sb.from("site_settings").upsert(rows).then(function (r) {
+          if (r.error) { flash("Enregistrement impossible."); return; }
+          return Promise.all(Array.prototype.map.call(checks, function (c) {
+            return sb.from("products").update({ is_drop: c.checked }).eq("id", c.getAttribute("data-drop-product"));
+          })).then(function (all) {
+            var bad = all.filter(function (x) { return x.error; }).length;
+            flash(bad ? "Drop enregistré, mais " + bad + " produit(s) n'ont pas pu être mis à jour." : "Drop enregistré.", !bad);
+          });
         });
       } else if (e.target.id === "settings-form") {
         var v = String(new FormData(e.target).get("announcement")).trim();
