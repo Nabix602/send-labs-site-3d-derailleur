@@ -177,7 +177,23 @@
     var el = document.getElementById("announce");
     if (!el) return;
     sb.from("site_settings").select("value").eq("key", "announcement").maybeSingle().then(function (r) {
-      if (r.data && r.data.value) el.textContent = r.data.value;
+      var items = String((r.data && r.data.value) || "").split("|").map(function (t) { return t.trim(); }).filter(Boolean).slice(0, 12);
+      if (!items.length) return;
+      function group(hidden) {
+        var g = document.createElement("div");
+        g.className = "marquee-group";
+        if (hidden) g.setAttribute("aria-hidden", "true");
+        items.forEach(function (t) { var i = document.createElement("span"); i.textContent = t; g.appendChild(i); });
+        return g;
+      }
+      var track = document.createElement("div");
+      track.className = "marquee-track";
+      track.appendChild(group(false));
+      track.appendChild(group(true));
+      track.appendChild(group(true));
+      track.appendChild(group(true));
+      el.textContent = "";
+      el.appendChild(track);
     });
   }
 

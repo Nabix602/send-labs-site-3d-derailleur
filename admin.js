@@ -138,8 +138,8 @@
 
     settings: function () {
       return sb.from("site_settings").select("*").eq("key", "announcement").maybeSingle().then(function (r) {
-        body().innerHTML = '<div class="panel"><h3>Bandeau d\'annonce</h3><p style="color:var(--muted)">Texte affiché tout en haut du site. Laissez vide pour le masquer.</p>' +
-          '<form id="settings-form"><label>Texte<input name="announcement" maxlength="200" value="' + esc((r.data && r.data.value) || "") + '"></label><button class="btn small" type="submit">Enregistrer</button></form></div>';
+        body().innerHTML = '<div class="panel"><h3>Bandeau d\'annonce</h3><p style="color:var(--muted)">Bande verte qui défile tout en haut du site. Séparez les messages par le signe | (ex. : Fabriqué en France | Nouveau drop | Livraison offerte dès 2 articles). Laissez vide pour la masquer.</p>' +
+          '<form id="settings-form"><label>Messages<input name="announcement" maxlength="400" value="' + esc((r.data && r.data.value) || "") + '"></label><button class="btn small" type="submit">Enregistrer</button></form></div>';
       });
     }
   };
