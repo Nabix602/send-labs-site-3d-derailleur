@@ -23,6 +23,46 @@
     }).join("");
   }
 
+  // Onglets Photo / Vue 3D : la visionneuse (three.js) n'est chargée qu'au premier clic sur « Vue 3D ».
+  function setup3d(path) {
+    var photo = document.getElementById("media-photo"), box = document.getElementById("media-3d");
+    var tabs = document.querySelectorAll("[data-media]");
+    if (!photo || !box) return;
+    var state = "idle", api = null;
+    function note(html) { box.innerHTML = '<div class="viewer-msg">' + html + "</div>"; }
+    function load() {
+      if (state !== "idle") return;
+      state = "loading";
+      note("Chargement du modèle 3D…");
+      var url = (window.SL.supabaseUrl || "") + "/storage/v1/object/public/models/" + encodeURIComponent(path);
+      import("./viewer.js").then(function (m) {
+        box.innerHTML = "";
+        return m.mountViewer(box, url);
+      }).then(function (v) {
+        api = v; state = "ready";
+        var hint = document.createElement("div");
+        hint.className = "viewer-hint";
+        hint.textContent = "Glissez pour tourner · pincez ou molette pour zoomer";
+        var reset = document.createElement("button");
+        reset.type = "button"; reset.className = "viewer-reset"; reset.textContent = "Recentrer";
+        reset.addEventListener("click", function () { api.reset(); });
+        box.appendChild(hint); box.appendChild(reset);
+        box.addEventListener("pointerdown", function () { hint.style.opacity = "0"; }, { once: true });
+      }).catch(function (e) {
+        state = "error";
+        note(e && e.message === "webgl" ? "Votre navigateur ne permet pas l'affichage 3D." : "Le modèle 3D n'a pas pu être chargé.");
+      });
+    }
+    Array.prototype.forEach.call(tabs, function (b) {
+      b.addEventListener("click", function () {
+        var is3d = b.getAttribute("data-media") === "3d";
+        Array.prototype.forEach.call(tabs, function (x) { x.classList.toggle("on", x === b); });
+        photo.hidden = is3d; box.hidden = !is3d;
+        if (is3d) load();
+      });
+    });
+  }
+
   var pages = {
     home: function () {
       return Promise.all([S.loadProducts(), S.loadDrop()]).then(function (res) {
@@ -109,10 +149,18 @@
           : (p.status === "soon" || p.price_cents == null)
             ? '<a class="btn" href="contact.html">Être prévenu</a>'
             : '<button class="btn" data-add="' + esc(p.id) + '">Ajouter au panier</button>';
-        view().innerHTML = '<div class="product-hero"><div class="img">' + (u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '">' : esc(p.name.charAt(0))) +
-          "</div><div>" + (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : "") +
+        var mp = typeof p.model_path === "string" && /^[a-z0-9._-]+\.stl$/i.test(p.model_path) ? p.model_path : null;
+        var media = '<div class="img" id="media-photo">' + (u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '">' : esc(p.name.charAt(0))) + "</div>";
+        if (mp) {
+          media = '<div class="media">' +
+            '<div class="media-tabs"><button type="button" class="on" data-media="photo">Photo</button><button type="button" data-media="3d">Vue 3D</button></div>' +
+            media + '<div class="img viewer" id="media-3d" hidden></div></div>';
+        }
+        view().innerHTML = '<div class="product-hero">' + media +
+          "<div>" + (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : "") +
           "<h1>" + esc(p.name) + '</h1><p class="tag">' + esc(p.tagline || "") + "</p><p>" + esc(p.description || "") + "</p>" +
           '<div class="pr">' + (p.price_cents != null ? money(p.price_cents) + ' <small style="font-weight:500;color:var(--muted)">TTC</small>' : "Prix à venir") + "</div>" + buy + "</div></div>";
+        if (mp) setup3d(mp);
       });
     },
 

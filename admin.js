@@ -63,6 +63,12 @@
             '<label>Accroche<input data-f="tagline" value="' + esc(p.tagline || "") + '"></label>' +
             '<label>Image (adresse https:// ou photos/nom.jpg)<input data-f="image" value="' + esc(p.image_url || "") + '"></label>' +
             '<label>Description<textarea data-f="description" rows="3">' + esc(p.description || "") + "</textarea></label>" +
+            '<div class="model-box" data-slug="' + esc(p.slug) + '" data-model="' + esc(p.model_path || "") + '"><strong>Modèle 3D (.stl)</strong>' +
+            '<p style="margin:4px 0;color:var(--muted);font-size:.85rem">' + (p.model_path ? "Modèle en ligne : " + esc(p.model_path) : "Aucun modèle : la fiche n'affiche pas d'onglet « Vue 3D ».") + "</p>" +
+            '<input type="file" data-model-file accept=".stl" style="max-width:100%">' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px"><button class="btn small" type="button" data-action="upload-model">Envoyer le modèle</button>' +
+            (p.model_path ? '<button class="btn small ghost" type="button" data-action="remove-model">Retirer le modèle</button>' : "") + "</div>" +
+            '<p style="color:#8a5a00;font-size:.8rem;margin-top:8px">⚠ Le fichier est public : un visiteur technique peut le télécharger. Envoyez une version allégée / simplifiée pour l\'aperçu (50 Mo max), jamais votre fichier d\'impression d\'origine.</p></div>' +
             '<p style="color:var(--muted);font-size:.8rem">Adresse de la fiche : produit.html?p=' + esc(p.slug) + '</p>' +
             '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn small" data-action="save-product">Enregistrer</button>' +
             '<button class="btn small ghost" data-action="delete-product">Supprimer</button></div></div>';
@@ -170,6 +176,31 @@
         var panel = a.closest("[data-pid]"), data = readProduct(panel);
         if (!data || !data.name) { flash("Vérifiez les champs (nom, prix, stock, ordre)."); return; }
         sb.from("products").update(data).eq("id", panel.getAttribute("data-pid")).then(function (r) { flash(r.error ? "Enregistrement impossible." : "Produit enregistré.", !r.error); });
+      } else if (act === "upload-model" || act === "remove-model") {
+        var box = a.closest(".model-box"), pid = a.closest("[data-pid]").getAttribute("data-pid");
+        var oldPath = box.getAttribute("data-model");
+        function dropOld() { if (oldPath) return sb.storage.from("models").remove([oldPath]); return Promise.resolve(); }
+        if (act === "remove-model") {
+          if (!confirm("Retirer le modèle 3D de cette fiche ?")) return;
+          sb.from("products").update({ model_path: null }).eq("id", pid).then(function (r) {
+            if (r.error) { flash("Retrait impossible."); return; }
+            return dropOld().then(function () { show("products"); });
+          });
+          return;
+        }
+        var file = box.querySelector("[data-model-file]").files[0];
+        if (!file) { flash("Choisissez d'abord un fichier .stl."); return; }
+        if (!/\.stl$/i.test(file.name)) { flash("Le fichier doit être au format .stl."); return; }
+        if (file.size > 50 * 1024 * 1024) { flash("Fichier trop lourd (50 Mo maximum). Allégez-le avant l'envoi."); return; }
+        var newPath = box.getAttribute("data-slug").toLowerCase().replace(/[^a-z0-9-]/g, "") + "-" + Date.now() + ".stl";
+        a.disabled = true; flash("Envoi en cours…", true);
+        sb.storage.from("models").upload(newPath, file, { contentType: "model/stl", upsert: false }).then(function (up) {
+          if (up.error) { a.disabled = false; flash("Envoi impossible."); return; }
+          return sb.from("products").update({ model_path: newPath }).eq("id", pid).then(function (r) {
+            if (r.error) { a.disabled = false; sb.storage.from("models").remove([newPath]); flash("Enregistrement impossible."); return; }
+            return dropOld().then(function () { show("products"); flash("Modèle 3D en ligne.", true); });
+          });
+        });
       } else if (act === "delete-product") {
         if (!confirm("Supprimer ce produit ? Les commandes passées gardent leur historique.")) return;
         sb.from("products").delete().eq("id", a.closest("[data-pid]").getAttribute("data-pid")).then(function (r) {
