@@ -1,0 +1,181 @@
+/* Espace administrateur : commandes, produits, messages, clients, réglages */
+(function () {
+  var S = window.SLapp, sb = S.sb, esc = S.esc, money = S.money;
+  var root = document.getElementById("admin");
+  var STATUS = { pending: "En attente de paiement", paid: "Payée", shipped: "Expédiée", cancelled: "Annulée" };
+  var tab = "orders";
+
+  function notice(msg, cls) { return '<div class="' + (cls || "notice") + '">' + esc(msg) + "</div>"; }
+  function opt(value, label, cur) { return '<option value="' + esc(value) + '"' + (value === cur ? " selected" : "") + ">" + esc(label) + "</option>"; }
+  function toCents(v) {
+    v = String(v || "").trim().replace(",", ".");
+    if (v === "") return null;
+    var n = parseFloat(v);
+    return isNaN(n) || n < 0 ? undefined : Math.round(n * 100);
+  }
+  function toInt(v) {
+    v = String(v || "").trim();
+    if (v === "") return null;
+    var n = parseInt(v, 10);
+    return isNaN(n) || n < 0 ? undefined : n;
+  }
+  function flash(msg, ok) {
+    var el = document.getElementById("flash");
+    if (el) el.innerHTML = notice(msg, ok ? "ok" : "notice");
+  }
+
+  function tabsHtml() {
+    var names = { orders: "Commandes", products: "Produits", messages: "Messages", clients: "Clients", settings: "Réglages" };
+    return '<div class="tabs">' + Object.keys(names).map(function (k) {
+      return '<button data-tab="' + k + '" class="' + (k === tab ? "on" : "") + '">' + names[k] + "</button>";
+    }).join("") + '</div><div id="flash"></div><div id="tab-body"></div>';
+  }
+  function body() { return document.getElementById("tab-body"); }
+
+  var views = {
+    orders: function () {
+      return sb.from("orders").select("*, order_items(*)").order("created_at", { ascending: false }).limit(100).then(function (r) {
+        if (r.error) { body().innerHTML = notice("Lecture impossible."); return; }
+        if (!r.data.length) { body().innerHTML = notice("Aucune commande pour le moment."); return; }
+        body().innerHTML = r.data.map(function (o) {
+          var items = (o.order_items || []).map(function (i) { return esc(i.quantity) + " × " + esc(i.name) + " (" + money(i.unit_price_cents) + ")"; }).join("<br>");
+          return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>Commande ' + esc(o.id.slice(0, 8)) + "</strong><span>" + esc(S.dateFr(o.created_at)) + "</span></div>" +
+            "<p><strong>" + esc(o.full_name || "") + "</strong> · " + esc(o.phone || "") + "<br>" + esc(o.address || "").replace(/\n/g, "<br>") + "</p>" +
+            (o.note ? '<p style="color:var(--muted)">Note : ' + esc(o.note) + "</p>" : "") + "<p>" + items + "</p><p><strong>Total : " + money(o.total_cents) + "</strong></p>" +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap"><select data-status-for="' + esc(o.id) + '">' +
+            Object.keys(STATUS).map(function (k) { return opt(k, STATUS[k], o.status); }).join("") + '</select>' +
+            '<button class="btn small" data-action="save-order" data-id="' + esc(o.id) + '">Enregistrer le statut</button></div></div>';
+        }).join("");
+      });
+    },
+
+    products: function () {
+      return sb.from("products").select("*").order("sort_order").then(function (r) {
+        if (r.error) { body().innerHTML = notice("Lecture impossible."); return; }
+        var rows = r.data.map(function (p) {
+          return '<div class="panel" data-pid="' + esc(p.id) + '"><div class="row2">' +
+            '<label>Nom<input data-f="name" value="' + esc(p.name) + '"></label>' +
+            '<label>Prix TTC en € (vide = sur demande)<input data-f="price" inputmode="decimal" value="' + (p.price_cents == null ? "" : esc((p.price_cents / 100).toFixed(2))) + '"></label>' +
+            '<label>Stock (vide = non suivi)<input data-f="stock" inputmode="numeric" value="' + (p.stock == null ? "" : esc(p.stock)) + '"></label>' +
+            '<label>Statut<select data-f="status">' + opt("published", "Publié", p.status) + opt("soon", "Bientôt disponible", p.status) + opt("draft", "Brouillon (masqué)", p.status) + "</select></label>" +
+            '<label>Ordre d\'affichage<input data-f="sort" inputmode="numeric" value="' + esc(p.sort_order) + '"></label>' +
+            '<label>Type<select data-f="kind">' + opt("product", "Produit", p.kind) + opt("gift_card", "Carte cadeau", p.kind) + "</select></label></div>" +
+            '<label>Accroche<input data-f="tagline" value="' + esc(p.tagline || "") + '"></label>' +
+            '<label>Image (adresse https:// ou photos/nom.jpg)<input data-f="image" value="' + esc(p.image_url || "") + '"></label>' +
+            '<label>Description<textarea data-f="description" rows="3">' + esc(p.description || "") + "</textarea></label>" +
+            '<p style="color:var(--muted);font-size:.8rem">Adresse de la fiche : produit.html?p=' + esc(p.slug) + '</p>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn small" data-action="save-product">Enregistrer</button>' +
+            '<button class="btn small ghost" data-action="delete-product">Supprimer</button></div></div>';
+        }).join("");
+        body().innerHTML = '<div class="panel"><h3>Ajouter un produit</h3><form id="new-product"><div class="row2">' +
+          '<label>Nom<input name="name" required></label><label>Adresse courte (ex. mon-produit)<input name="slug" required pattern="[a-z0-9\\-]+"></label>' +
+          '<label>Prix TTC en €<input name="price" inputmode="decimal"></label></div>' +
+          '<label>Accroche<input name="tagline"></label><label>Description<textarea name="description" rows="3"></textarea></label>' +
+          '<button class="btn small" type="submit">Ajouter (en brouillon)</button></form></div>' + rows;
+      });
+    },
+
+    messages: function () {
+      return sb.from("submissions").select("*").order("created_at", { ascending: false }).limit(200).then(function (r) {
+        if (r.error) { body().innerHTML = notice("Lecture impossible."); return; }
+        if (!r.data.length) { body().innerHTML = notice("Aucun message pour le moment."); return; }
+        var LABEL = { contact: "Contact", ambassadeur: "Ambassadeur", surprise: "Ta surprise" };
+        body().innerHTML = r.data.map(function (m) {
+          var fields = Object.keys(m.payload || {}).map(function (k) { return "<strong>" + esc(k) + " :</strong> " + esc(m.payload[k]); }).join("<br>");
+          return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span class="status">' + esc(LABEL[m.type] || m.type) + "</span><span>" + esc(S.dateFr(m.created_at)) + "</span></div><p>" + fields +
+            '</p><button class="btn small ghost" data-action="delete-message" data-id="' + esc(m.id) + '">Supprimer</button></div>';
+        }).join("");
+      });
+    },
+
+    clients: function () {
+      return sb.from("profiles").select("*").order("created_at", { ascending: false }).limit(200).then(function (r) {
+        if (r.error) { body().innerHTML = notice("Lecture impossible."); return; }
+        body().innerHTML = '<table><tr><th>E-mail</th><th>Nom</th><th>Inscrit</th><th>Rôle</th></tr>' + r.data.map(function (p) {
+          return "<tr><td>" + esc(p.email || "") + "</td><td>" + esc(p.full_name || "") + "</td><td>" + esc(S.dateFr(p.created_at)) + '</td><td><select data-role-for="' + esc(p.id) + '">' +
+            opt("client", "Client", p.role) + opt("admin", "Admin", p.role) + '</select> <button class="btn small ghost" data-action="save-role" data-id="' + esc(p.id) + '">OK</button></td></tr>';
+        }).join("") + "</table>";
+      });
+    },
+
+    settings: function () {
+      return sb.from("site_settings").select("*").eq("key", "announcement").maybeSingle().then(function (r) {
+        body().innerHTML = '<div class="panel"><h3>Bandeau d\'annonce</h3><p style="color:var(--muted)">Texte affiché tout en haut du site. Laissez vide pour le masquer.</p>' +
+          '<form id="settings-form"><label>Texte<input name="announcement" maxlength="200" value="' + esc((r.data && r.data.value) || "") + '"></label><button class="btn small" type="submit">Enregistrer</button></form></div>';
+      });
+    }
+  };
+
+  function show(t) {
+    tab = t;
+    root.innerHTML = tabsHtml();
+    views[t]().catch(function () { body().innerHTML = notice("Chargement impossible."); });
+  }
+
+  function readProduct(panel) {
+    function f(n) { return panel.querySelector('[data-f="' + n + '"]'); }
+    var price = toCents(f("price").value), stock = toInt(f("stock").value), sort = toInt(f("sort").value);
+    if (price === undefined || stock === undefined || sort === undefined) return null;
+    return {
+      name: f("name").value.trim(), price_cents: price, stock: stock, sort_order: sort === null ? 0 : sort,
+      status: f("status").value, kind: f("kind").value, tagline: f("tagline").value.trim(),
+      image_url: f("image").value.trim() || null, description: f("description").value.trim()
+    };
+  }
+
+  function bind() {
+    root.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-tab]");
+      if (t) { show(t.getAttribute("data-tab")); return; }
+      var a = e.target.closest("[data-action]");
+      if (!a) return;
+      var act = a.getAttribute("data-action"), id = a.getAttribute("data-id");
+
+      if (act === "save-order") {
+        var st = root.querySelector('[data-status-for="' + id + '"]').value;
+        sb.from("orders").update({ status: st }).eq("id", id).then(function (r) { flash(r.error ? "Mise à jour impossible." : "Statut enregistré.", !r.error); });
+      } else if (act === "save-product") {
+        var panel = a.closest("[data-pid]"), data = readProduct(panel);
+        if (!data || !data.name) { flash("Vérifiez les champs (nom, prix, stock, ordre)."); return; }
+        sb.from("products").update(data).eq("id", panel.getAttribute("data-pid")).then(function (r) { flash(r.error ? "Enregistrement impossible." : "Produit enregistré.", !r.error); });
+      } else if (act === "delete-product") {
+        if (!confirm("Supprimer ce produit ? Les commandes passées gardent leur historique.")) return;
+        sb.from("products").delete().eq("id", a.closest("[data-pid]").getAttribute("data-pid")).then(function (r) {
+          if (r.error) flash("Suppression impossible."); else show("products");
+        });
+      } else if (act === "delete-message") {
+        sb.from("submissions").delete().eq("id", id).then(function (r) { if (r.error) flash("Suppression impossible."); else show("messages"); });
+      } else if (act === "save-role") {
+        var role = root.querySelector('[data-role-for="' + id + '"]').value;
+        sb.from("profiles").update({ role: role }).eq("id", id).then(function (r) { flash(r.error ? "Changement de rôle impossible." : "Rôle enregistré.", !r.error); });
+      }
+    });
+
+    root.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (e.target.id === "new-product") {
+        var fd = new FormData(e.target), price = toCents(fd.get("price"));
+        if (price === undefined) { flash("Prix invalide."); return; }
+        sb.from("products").insert({
+          name: String(fd.get("name")).trim(), slug: String(fd.get("slug")).trim(), price_cents: price,
+          tagline: String(fd.get("tagline") || "").trim(), description: String(fd.get("description") || "").trim(), status: "draft", kind: "product", sort_order: 50
+        }).then(function (r) {
+          if (r.error) flash("Ajout impossible (adresse courte déjà utilisée ?)."); else show("products");
+        });
+      } else if (e.target.id === "settings-form") {
+        var v = String(new FormData(e.target).get("announcement")).trim();
+        sb.from("site_settings").upsert({ key: "announcement", value: v }).then(function (r) { flash(r.error ? "Enregistrement impossible." : "Bandeau enregistré.", !r.error); });
+      }
+    });
+  }
+
+  sb.auth.getSession().then(function (r) {
+    var s = r.data && r.data.session;
+    if (!s) { location.replace("connexion.html?next=admin.html"); return; }
+    return sb.from("profiles").select("role").eq("id", s.user.id).maybeSingle().then(function (p) {
+      if (!p.data || p.data.role !== "admin") { root.innerHTML = notice("Accès réservé aux administrateurs."); return; }
+      bind();
+      show("orders");
+    });
+  }).catch(function () { root.innerHTML = notice("Chargement impossible."); });
+})();

@@ -4,36 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ta surprise – SendLabs</title>
+<meta name="description" content="Déclare ton achat pour recevoir ta surprise SendLabs.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-page="static">
 <header id="site-header"></header>
 <main class="wrap">
-  <div class="page-title"><h1>Merci pour ta commande ! <span>🎁</span></h1><p>Déclare ton achat pour recevoir ta surprise SendLabs : <strong>-10 % sur ta prochaine commande</strong>.</p></div>
-  <section class="block">
-    <form name="surprise" method="POST" action="merci.html" data-netlify="true" netlify-honeypot="bot-field">
-      <input type="hidden" name="form-name" value="surprise">
-      <p hidden><label>Ne pas remplir <input name="bot-field"></label></p>
-      <label>Pseudo utilisé pour l'achat<input name="pseudo_achat" required></label>
-      <label>Produit acheté
-        <select name="produit">
-          <option>Protège-dérailleur</option>
-          <option>Protège-disque de frein</option>
-          <option>Garde-boue</option>
-          <option>Autre</option>
-        </select>
-      </label>
-      <label>Qui t'a fait découvrir SendLabs ? (code ambassadeur)<input name="code_ambassadeur" placeholder="Laisse vide si personne"></label>
-      <label>E-mail<input type="email" name="email" required></label>
-      <label class="check"><input type="checkbox" name="consentement" required> J'accepte que ces informations soient utilisées pour vérifier ma commande et m'envoyer ma surprise (<a href="confidentialite.html" style="color:var(--accent)">confidentialité</a>).</label>
-      <button class="btn" type="submit">Recevoir ma surprise</button>
-    </form>
-  </section>
-</main>
+<div class="page-title"><h1>Merci pour ta commande !</h1><p>Déclare ton achat pour recevoir ta surprise SendLabs : <strong>-10 % sur ta prochaine commande</strong>.</p></div>
+<section class="block">
+<form data-submit="surprise" data-success="Merci ! Ta déclaration est enregistrée. On vérifie ta commande et on revient vers toi avec ta surprise.">
+  <p hidden><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+  <label>Nom ou pseudo utilisé pour la commande<input name="pseudo_achat" required maxlength="120"></label>
+  <label>Produit acheté<select name="produit"><option>Send Cage</option><option>Protège-dérailleur</option><option>Protège-disque de frein</option><option>Garde-boue</option><option>Carte cadeau</option><option>Autre</option></select></label>
+  <label>Qui t'a fait découvrir SendLabs ? (code ambassadeur)<input name="code_ambassadeur" maxlength="60" placeholder="Laisse vide si personne"></label>
+  <label>E-mail<input type="email" name="email" required maxlength="200"></label>
+  <label class="check"><input type="checkbox" name="consentement" value="oui" required> J'accepte que ces informations soient utilisées pour vérifier ma commande et m'envoyer ma surprise (<a href="confidentialite.html" style="text-decoration:underline">confidentialité</a>).</label>
+  <button class="btn" type="submit">Recevoir ma surprise</button></form></section></main>
 <footer id="site-footer"></footer>
-<script src="data.js"></script>
-<script src="layout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="pages.js"></script>
 </body>
 </html>

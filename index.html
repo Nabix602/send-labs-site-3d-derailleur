@@ -3,44 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SendLabs – Protections vélo imprimées en 3D</title>
-<meta name="description" content="Protège-dérailleurs, protèges-disques et accessoires pour vélo en TPU, modélisés et imprimés en 3D par SendLabs.">
-<meta property="og:title" content="SendLabs – Protégez votre vélo des chutes">
-<meta property="og:description" content="Protections vélo en TPU, modélisées et imprimées en 3D.">
+<title>SendLabs – Protections et accessoires vélo imprimés en 3D</title>
+<meta name="description" content="Atelier SendLabs (Yvelines) : Send Cage, protège-dérailleurs, protèges-disques et accessoires vélo conçus et imprimés en 3D.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-page="home">
 <header id="site-header"></header>
-<main class="wrap">
-  <div class="hero">
-    <h1>Protégez votre vélo <span>des chutes.</span></h1>
-    <p class="lead">Protège-dérailleurs, protèges-disques et accessoires, modélisés et imprimés en 3D par SendLabs.</p>
-    <a class="btn" href="produits.html">Voir les produits</a>
-  </div>
-
-  <section class="block">
-    <div class="feat">
-      <div><strong>Conçu par nos soins</strong><span>Chaque pièce est modélisée en interne.</span></div>
-      <div><strong>Imprimé en 3D</strong><span>Un matériau souple et résistant aux chocs.</span></div>
-      <div><strong>Achat simple</strong><span>Paiement et livraison sécurisés.</span></div>
-    </div>
-  </section>
-
-  <section class="block">
-    <h2>Nos produits</h2>
-    <div class="grid" id="products"></div>
-  </section>
-
-  <div class="cta">
-    <h2>Une question sur la compatibilité ?</h2>
-    <p>Écrivez-nous, on vous répond rapidement.</p>
-    <a class="btn" href="contact.html">Nous contacter</a>
-  </div>
+<main>
+<section class="hero-home">
+  <span class="pill">ATELIER SENDLABS <i></i> <b>YVELINES 78</b></span>
+  <h1>Send Cage.</h1>
+  <p class="sub">L'intégration AirTag invisible. Conçue pour durer.</p>
+  <p class="desc">Usinage et fabrication additive de haute précision en Île-de-France. Un profil ultra épuré de 28g pensé pour la route, le gravel et le VTT sans altérer la ligne du vélo.</p>
+  <div class="price-row"><strong id="cage-price">24,90 €</strong><small>TTC</small></div>
+  <div class="actions"><button class="btn" data-add="send-cage">Ajouter au panier</button><a class="btn ghost" href="#cartes-cadeaux">Offrir une carte cadeau</a></div>
+  <div class="hero-img"><div class="card" style="border:0"><div class="img" style="aspect-ratio:16/9;font-size:1rem;font-weight:600">Votre photo du Send Cage ici (champ « Image » dans l'administration)</div></div></div>
+</section>
+<div class="feat">
+  <div><strong>28g</strong><b>Ultra-léger</b><span>Rigidité calibrée contre les vibrations.</span></div>
+  <div><strong>Invisible</strong><b>AirTag intégré</b><span>Logement scellé sous le bidon.</span></div>
+  <div><strong>100% France</strong><b>Yvelines (78)</b><span>Conception et production locale.</span></div>
+  <div><strong>Zéro jeu</strong><b>Bidons 500-750ml</b><span>Maintien parfait sur piste cassante.</span></div>
+</div>
+<div class="wrap">
+  <section class="block"><span class="eyebrow">La gamme</span><h2>Protégez votre vélo des chutes.</h2><div class="grid" id="range"></div></section>
+  <section class="block" id="cartes-cadeaux"><span class="eyebrow">SendLabs gift card</span><h2>La Carte Cadeau SendLabs.</h2>
+    <p style="text-align:center;color:var(--muted);max-width:560px;margin:-8px auto 24px">Offrez la liberté de choisir. Utilisable sur la boutique en ligne pour équiper chaque sortie vélo.</p>
+    <div class="grid" id="gifts"></div></section>
+  <section class="block"><div class="demarche"><div><span class="eyebrow" style="text-align:left">Notre démarche</span><h2 style="text-align:left">De la passion du vélo à la précision d'atelier.</h2>
+    <blockquote>« L'idée est née d'un besoin évident : rouler sereinement sans compromettre le poids ni la ligne de son vélo. »</blockquote>
+    <p style="color:var(--muted)">Chaque composant SendLabs est conçu, testé sur les routes et pistes des Yvelines puis contrôlé individuellement avant expédition. Un circuit court garantissant une qualité irréprochable.</p></div>
+    <div class="ph"></div></div></section>
+  <div class="cta"><h2>Rejoignez l'expérience SendLabs.</h2><p>Protégez votre vélo dès aujourd'hui ou offrez une carte cadeau utilisable immédiatement.</p>
+    <div class="actions"><a class="btn" href="boutique.html">Voir la boutique</a><a class="btn ghost" href="#cartes-cadeaux">Choisir une carte cadeau</a></div></div>
+</div>
 </main>
 <footer id="site-footer"></footer>
-<script src="data.js"></script>
-<script src="layout.js"></script>
-<script>renderProducts("products");</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script src="pages.js"></script>
 </body>
 </html>

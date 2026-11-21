@@ -1,22 +1,28 @@
 # Site SendLabs
 
-Site vitrine statique (HTML, CSS, JavaScript), sans étape de build.
+Site statique (HTML, CSS, JavaScript, sans étape de build) hébergé sur Vercel, avec comptes, commandes et administration sur Supabase.
 
-## Modifier le site
-- **Liens, e-mail, réseaux, produits** : tout est dans `data.js` (liens Vinted, textes produits, photos).
-- **Photos** : mettez-les dans un dossier `photos/` puis renseignez `image: "photos/nom.jpg"` dans `data.js`.
-- **Logo** : remplacez `logo.svg` (favicon et logo du header).
-- **Couleurs** : variables en haut de `style.css`.
-- **Pages légales** : complétez les champs entre crochets dans `mentions-legales.html` et `confidentialite.html`.
+## Ce qui est dynamique (Supabase)
+- **Produits et prix** : table `products`, modifiable dans `admin.html`.
+- **Comptes** : inscription / connexion (Supabase Auth), rôle `client` ou `admin` (table `profiles`).
+- **Commandes** : créées par la fonction `place_order` (les prix sont relus côté base, jamais envoyés par le navigateur).
+- **Formulaires** (contact, ambassadeur, ta surprise) : table `submissions`, lisible uniquement par un admin.
+- **Bandeau d'annonce** : table `site_settings`.
 
-## Tester en local
+La clé de `config.js` est une clé *publishable* : elle est faite pour être publique. La sécurité repose sur les règles RLS de la base.
+
+## Fichiers
+- `config.js` : e-mail, réseaux sociaux, accès Supabase.
+- `app.js` : en-tête, pied de page, panier, formulaires.
+- `pages.js` : accueil, boutique, produit, panier, connexion, compte.
+- `admin.js` : espace administrateur.
+- `style.css` : tout le design (variables de couleurs en haut).
+
+## Devenir administrateur
+Créer un compte sur le site, puis dans Supabase (SQL Editor) :
+```sql
+update public.profiles set role = 'admin' where email = 'votre@email.fr';
 ```
-npx serve .
-```
 
-## Déployer sur Netlify
-1. Sur Netlify : Add new site → Import an existing project → GitHub → choisir ce dépôt (privé accepté).
-2. Build command : vide. Publish directory : `.`
-3. Les formulaires (contact, ambassadeur, ta surprise) sont gérés par Netlify Forms : les messages arrivent dans l'onglet Forms du site.
-
-Chaque `git push` met le site à jour automatiquement.
+## Déploiement
+Chaque `git push` sur `main` redéploie automatiquement sur Vercel.
