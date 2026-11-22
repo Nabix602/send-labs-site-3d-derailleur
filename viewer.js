@@ -13,18 +13,29 @@ export function mountViewer(box, url, opts) {
     return Promise.reject(new Error("webgl"));
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
   renderer.domElement.setAttribute("aria-label", "Modèle 3D interactif");
   box.appendChild(renderer.domElement);
 
+  var visible = true, raf = 0, home = null, disposed = false, mesh = null;
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(40, 1, 0.1, 5000);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a93a3, 1.1));
-  var key = new THREE.DirectionalLight(0xffffff, 1.6);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a93a3, 0.6));
+  var key = new THREE.DirectionalLight(0xffffff, 1.2);
   key.position.set(1, 1.5, 1.2);
   scene.add(key);
   var fill = new THREE.DirectionalLight(0xffffff, 0.6);
   fill.position.set(-1, 0.4, -1);
   scene.add(fill);
+
+  // Éclairage de studio (reflets réalistes) : facultatif, la scène reste éclairée s'il ne charge pas.
+  import("three/addons/environments/RoomEnvironment.js").then(function (m) {
+    if (disposed) return;
+    var pm = new THREE.PMREMGenerator(renderer);
+    scene.environment = pm.fromScene(new m.RoomEnvironment(), 0.04).texture;
+    pm.dispose();
+  }).catch(function () {});
 
   var controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -33,7 +44,7 @@ export function mountViewer(box, url, opts) {
   controls.autoRotateSpeed = 1.6;
   controls.addEventListener("start", function () { controls.autoRotate = false; });
 
-  var visible = true, raf = 0, home = null, disposed = false;
+
 
   function resize() {
     var w = box.clientWidth || 1, h = box.clientHeight || 1;
@@ -65,7 +76,7 @@ export function mountViewer(box, url, opts) {
       geo.center();
       geo.computeBoundingSphere();
       var mat = new THREE.MeshStandardMaterial({ color: opts.color || 0x1f2430, roughness: 0.55, metalness: 0.1 });
-      var mesh = new THREE.Mesh(geo, mat);
+      mesh = new THREE.Mesh(geo, mat);
       mesh.rotation.x = -Math.PI / 2; // les STL sont en Z vers le haut
       scene.add(mesh);
       var r = geo.boundingSphere.radius || 1;
@@ -83,6 +94,8 @@ export function mountViewer(box, url, opts) {
           camera.position.copy(home.p); controls.target.set(0, 0, 0);
           controls.autoRotate = true; controls.update();
         },
+        setColor: function (hex) { mat.color.setHex(hex); },
+        wireframe: function (on) { mat.wireframe = !!on; },
         dispose: dispose
       });
     }, undefined, function () { dispose(); reject(new Error("load")); });

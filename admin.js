@@ -25,7 +25,7 @@
   }
 
   function tabsHtml() {
-    var names = { orders: "Commandes", products: "Produits", drop: "Drop", messages: "Messages", clients: "Clients", settings: "Réglages" };
+    var names = { orders: "Commandes", products: "Produits", stock: "Stock", drop: "Drop", messages: "Messages", clients: "Clients", settings: "Réglages" };
     return '<div class="tabs">' + Object.keys(names).map(function (k) {
       return '<button data-tab="' + k + '" class="' + (k === tab ? "on" : "") + '">' + names[k] + "</button>";
     }).join("") + '</div><div id="flash"></div><div id="tab-body"></div>';
@@ -89,7 +89,7 @@
     },
 
     drop: function () {
-      var keys = ["drop_enabled", "drop_title", "drop_description", "drop_starts_at", "drop_ends_at"];
+      var keys = ["drop_enabled", "drop_lock", "drop_title", "drop_description", "drop_starts_at", "drop_ends_at"];
       return Promise.all([
         sb.from("site_settings").select("key,value").in("key", keys),
         sb.from("products").select("id,name,is_drop,status,price_cents").eq("kind", "product").order("sort_order")
@@ -111,6 +111,7 @@
         body().innerHTML = '<div class="panel"><h3>Page Drop</h3>' +
           '<p style="color:var(--muted)">Quand le drop est désactivé, la page affiche « aucun drop » avec un formulaire d\'alerte, et le lien disparaît du menu. Les produits cochés ne sont commandables que pendant l\'ouverture du drop (vérifié côté serveur).</p>' +
           '<form id="drop-form"><label class="check"><input type="checkbox" name="enabled"' + (m.drop_enabled === "1" ? " checked" : "") + "> <strong>Drop activé</strong> (visible sur le site)</label>" +
+          '<label class="check"><input type="checkbox" name="lock"' + (m.drop_lock === "1" ? " checked" : "") + '> <strong>Verrouiller le site avant l\'ouverture</strong> : le public ne voit que le compte à rebours et le formulaire e-mail, seuls les admins peuvent se connecter. Le site s\'ouvre tout seul à l\'heure d\'ouverture (sans heure d\'ouverture, il reste verrouillé tant que vous ne décochez pas).</label>' +
           '<label>Titre<input name="title" maxlength="120" value="' + esc(m.drop_title || "") + '"></label>' +
           '<label>Description<textarea name="description" rows="3" maxlength="400">' + esc(m.drop_description || "") + "</textarea></label>" +
           '<div class="row2"><label>Ouverture (heure de votre appareil, vide = tout de suite)<input type="datetime-local" name="starts" value="' + esc(local(m.drop_starts_at)) + '"></label>' +
@@ -176,7 +177,7 @@
   function bind() {
     root.addEventListener("click", function (e) {
       var t = e.target.closest("[data-tab]");
-      if (t) { show(t.getAttribute("data-tab")); return; }
+      if (t) { if (t.getAttribute("data-tab") === "stock") { location.href = "stock.html"; return; } show(t.getAttribute("data-tab")); return; }
       var a = e.target.closest("[data-action]");
       if (!a) return;
       var act = a.getAttribute("data-action"), id = a.getAttribute("data-id");
@@ -262,6 +263,7 @@
         if (starts && ends && ends <= starts) { flash("La fermeture doit être après l'ouverture."); return; }
         var rows = [
           { key: "drop_enabled", value: dd.get("enabled") ? "1" : "0" },
+          { key: "drop_lock", value: dd.get("lock") ? "1" : "0" },
           { key: "drop_title", value: String(dd.get("title") || "").trim() },
           { key: "drop_description", value: String(dd.get("description") || "").trim() },
           { key: "drop_starts_at", value: starts ? starts.toISOString() : "" },

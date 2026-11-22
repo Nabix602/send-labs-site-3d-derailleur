@@ -53,6 +53,8 @@
     }
     return prodPromise;
   }
+  function soldOut(p) { return p.stock != null && p.stock <= 0; }
+  function lowStock(p) { return p.stock != null && p.stock > 0 && p.stock <= 3 ? '<span class="badge">Plus que ' + p.stock + '</span>' : ""; }
   function cmpPrice(p) { return p.compare_price_cents && p.price_cents != null && p.compare_price_cents > p.price_cents ? p.compare_price_cents : 0; }
   function priceHtml(p) {
     var c = cmpPrice(p);
@@ -63,11 +65,11 @@
     var u = safeUrl(p.image_url);
     var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0));
     var ext = p.status === "published" ? extUrl(p.external_url) : "";
-    var buy = ext ? extBtn(ext, "small") : (p.status === "soon" || p.price_cents == null)
+    var buy = ext ? extBtn(ext, "small") : soldOut(p) ? '<button class="btn small" disabled>Épuisé</button>' : (p.status === "soon" || p.price_cents == null)
       ? '<a class="btn small ghost" href="contact.html">Être prévenu</a>'
       : '<button class="btn small" data-add="' + esc(p.id) + '">Ajouter · ' + money(p.price_cents) + '</button>';
     return '<article class="card"><a class="img" href="produit.html?p=' + esc(p.slug) + '">' + img + '</a><div class="body">' +
-      (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : '') +
+      (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : '') + lowStock(p) +
       '<h3>' + esc(p.name) + '</h3><p>' + esc(p.tagline || "") + '</p>' + (cmpPrice(p) ? '<p class="price-line">' + priceHtml(p) + '</p>' : '') + '<div class="actions">' +
       '<a class="btn small ghost" href="produit.html?p=' + esc(p.slug) + '">Détails</a>' + buy + '</div></div></article>';
   }
@@ -80,7 +82,7 @@
   }
 
   /* ---------- Drop (série limitée, activable depuis l'admin) ---------- */
-  var DROP_KEYS = ["drop_enabled", "drop_title", "drop_description", "drop_starts_at", "drop_ends_at"];
+  var DROP_KEYS = ["drop_enabled", "drop_lock", "drop_title", "drop_description", "drop_starts_at", "drop_ends_at"];
   var dropPromise = null;
   function parseDate(v) {
     if (!v) return null;
@@ -96,12 +98,13 @@
         var start = parseDate(m.drop_starts_at), end = parseDate(m.drop_ends_at);
         var enabled = m.drop_enabled === "1";
         var ended = !!(enabled && end && now >= end);
+        var locked = !!(enabled && !ended && m.drop_lock === "1" && (!start || now < start));
         var upcoming = !!(enabled && !ended && start && now < start);
         return {
-          enabled: enabled && !ended, title: m.drop_title || "Drop", description: m.drop_description || "",
+          locked: locked, enabled: enabled && !ended, title: m.drop_title || "Drop", description: m.drop_description || "",
           start: start, end: end, upcoming: upcoming, live: enabled && !ended && !upcoming
         };
-      }).catch(function () { return { enabled: false, live: false, upcoming: false, title: "", description: "", start: null, end: null }; });
+      }).catch(function () { return { locked: false, enabled: false, live: false, upcoming: false, title: "", description: "", start: null, end: null }; });
     }
     return dropPromise;
   }
@@ -110,6 +113,7 @@
     var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0));
     var buy = !live
       ? '<button class="btn small" disabled>Pas encore ouvert</button>'
+      : soldOut(p) ? '<button class="btn small" disabled>Épuisé</button>'
       : (p.price_cents == null ? '<a class="btn small ghost" href="contact.html">Être prévenu</a>'
         : '<button class="btn small" data-add="' + esc(p.id) + '">Ajouter · ' + money(p.price_cents) + '</button>');
     return '<article class="card"><a class="img" href="produit.html?p=' + esc(p.slug) + '">' + img + '</a><div class="body"><span class="badge">Drop</span>' +
@@ -206,6 +210,83 @@
     });
   }
 
+  /* ---------- Verrouillage du site pendant l'attente d'un drop ---------- */
+  var OPEN_PAGES = ["connexion", "admin", "stock", "compte", "cgv", "mentions-legales", "confidentialite", "remboursement"];
+  function pageName() { var m = location.pathname.match(/([^\/]+?)(\.html)?$/); return m ? m[1] : "index"; }
+  function buildMarquee(el, items) {
+    function group(hidden) {
+      var g = document.createElement("div");
+      g.className = "marquee-group";
+      if (hidden) g.setAttribute("aria-hidden", "true");
+      items.forEach(function (t) { var i = document.createElement("span"); i.textContent = t; g.appendChild(i); });
+      return g;
+    }
+    var track = document.createElement("div");
+    track.className = "marquee-track";
+    track.appendChild(group(false)); track.appendChild(group(true)); track.appendChild(group(true)); track.appendChild(group(true));
+    el.textContent = "";
+    el.appendChild(track);
+  }
+  function renderLock(d) {
+    document.body.classList.add("locked");
+    var when = d.start ? d.start.toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" }) : "";
+    var el = document.createElement("div");
+    el.id = "lock";
+    el.innerHTML = '<div class="announce" id="lock-band"></div><div class="lock-inner">' +
+      '<img class="lock-logo" src="logo.png" alt="SendLabs" width="154" height="44">' +
+      '<span class="badge">Drop</span>' +
+      '<h1>' + esc(d.title || "Nouveau drop") + '</h1>' +
+      (d.description ? '<p class="lock-desc">' + esc(d.description) + '</p>' : '') +
+      (d.start ? '<p class="lock-when">Ouverture le ' + esc(when) + '</p><div class="countdown" id="lock-cd" aria-live="polite"></div>' : '<p class="lock-when">Ouverture très bientôt.</p>') +
+      '<h2>Reste informé</h2>' +
+      '<form data-submit="drop" data-success="C\'est noté ! Tu recevras un e-mail à l\'ouverture du drop.">' +
+      '<p hidden><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>' +
+      '<label>E-mail<input type="email" name="email" required maxlength="200" placeholder="ton@email.fr"></label>' +
+      '<label class="check"><input type="checkbox" name="consentement" value="oui" required> J\'accepte d\'être contacté pour ce drop (<a href="confidentialite.html" style="text-decoration:underline">confidentialité</a>).</label>' +
+      '<button class="btn" type="submit">Me prévenir</button></form>' +
+      '<p class="lock-links"><a href="mentions-legales.html">Mentions légales</a> · <a href="cgv.html">CGV</a> · <a href="confidentialite.html">Confidentialité</a> · <a href="connexion.html?next=admin.html">Accès équipe</a></p>' +
+      '</div>';
+    document.body.appendChild(el);
+    var items = [d.title || "Nouveau drop", when ? "Ouverture le " + when : "Bientôt", "Fabriqué en France", "Imprimé en 3D"].filter(Boolean);
+    buildMarquee(document.getElementById("lock-band"), items);
+    var cd = document.getElementById("lock-cd");
+    if (cd && d.start) {
+      var tick = function () {
+        var ms = d.start - new Date();
+        if (ms <= 0) { location.reload(); return; }
+        var s = Math.floor(ms / 1000), days = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+        function box(n, l) { return '<div><strong>' + (n < 10 ? "0" + n : n) + "</strong><span>" + l + "</span></div>"; }
+        cd.innerHTML = box(days, "jours") + box(h, "heures") + box(m, "min") + box(sec, "sec");
+      };
+      tick(); setInterval(tick, 1000);
+    }
+  }
+  function applyLock() {
+    var htmlEl = document.documentElement;
+    var open = OPEN_PAGES.indexOf(pageName()) !== -1;
+    if (!open) {
+      htmlEl.classList.add("sl-checking");
+      setTimeout(function () { htmlEl.classList.remove("sl-checking"); }, 4000);
+    }
+    loadDrop().then(function (d) {
+      if (!d.locked || open) { htmlEl.classList.remove("sl-checking"); return; }
+      return sb.auth.getSession().then(function (r) {
+        var s = r.data && r.data.session;
+        if (!s) return false;
+        return sb.from("profiles").select("role").eq("id", s.user.id).maybeSingle().then(function (p) { return !!(p.data && p.data.role === "admin"); });
+      }).then(function (isAdmin) {
+        if (isAdmin) {
+          var bar = document.createElement("div");
+          bar.className = "lock-admin";
+          bar.textContent = "Mode équipe : le site est verrouillé pour le public jusqu'à l'ouverture du drop.";
+          document.body.insertBefore(bar, document.body.firstChild);
+        } else {
+          renderLock(d);
+        }
+      });
+    }).catch(function () {}).then(function () { htmlEl.classList.remove("sl-checking"); });
+  }
+
   /* ---------- Clics « ajouter au panier » ---------- */
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-add]");
@@ -250,7 +331,7 @@
   document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + (C.email || ""); a.textContent = C.email || ""; });
 
   window.SLapp = {
-    sb: sb, esc: esc, money: money, dateFr: dateFr, safeUrl: safeUrl, priceHtml: priceHtml, extUrl: extUrl, extBtn: extBtn,
+    sb: sb, esc: esc, money: money, dateFr: dateFr, safeUrl: safeUrl, priceHtml: priceHtml, soldOut: soldOut, lowStock: lowStock, extUrl: extUrl, extBtn: extBtn,
     readCart: readCart, writeCart: writeCart, loadProducts: loadProducts,
     productCard: productCard, giftCard: giftCard, loadDrop: loadDrop, dropCard: dropCard
   };
@@ -259,4 +340,5 @@
   refreshAuth();
   loadAnnouncement();
   showDropLink();
+  applyLock();
 })();

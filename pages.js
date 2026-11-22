@@ -47,6 +47,31 @@
         reset.type = "button"; reset.className = "viewer-reset"; reset.textContent = "Recentrer";
         reset.addEventListener("click", function () { api.reset(); });
         box.appendChild(hint); box.appendChild(reset);
+        var bar = document.createElement("div");
+        bar.className = "viewer-tools";
+        [["Noir", 0x1f2430], ["Gris", 0x8a8f98], ["Vert", 0xb9f000], ["Blanc", 0xf2f2f2]].forEach(function (c, i) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "swatch" + (i === 0 ? " on" : ""); b.title = c[0] + " (aperçu)";
+          b.setAttribute("aria-label", "Aperçu couleur " + c[0]);
+          b.style.background = "#" + ("000000" + c[1].toString(16)).slice(-6);
+          b.addEventListener("click", function () {
+            api.setColor(c[1]);
+            Array.prototype.forEach.call(bar.querySelectorAll(".swatch"), function (x) { x.classList.toggle("on", x === b); });
+          });
+          bar.appendChild(b);
+        });
+        var wf = document.createElement("button");
+        wf.type = "button"; wf.className = "tool"; wf.textContent = "Maillage";
+        var wfOn = false;
+        wf.addEventListener("click", function () { wfOn = !wfOn; api.wireframe(wfOn); wf.classList.toggle("on", wfOn); });
+        bar.appendChild(wf);
+        if (box.requestFullscreen) {
+          var fs = document.createElement("button");
+          fs.type = "button"; fs.className = "tool"; fs.textContent = "Plein écran";
+          fs.addEventListener("click", function () { if (document.fullscreenElement) document.exitFullscreen(); else box.requestFullscreen(); });
+          bar.appendChild(fs);
+        }
+        box.appendChild(bar);
         box.addEventListener("pointerdown", function () { hint.style.opacity = "0"; }, { once: true });
       }).catch(function (e) {
         state = "error";
@@ -148,6 +173,7 @@
         var buy = (p.is_drop && !drop.live)
           ? '<a class="btn" href="drop.html">Voir le drop</a>'
           : ext ? S.extBtn(ext)
+          : S.soldOut(p) ? '<button class="btn" disabled>Épuisé</button>'
           : (p.status === "soon" || p.price_cents == null)
             ? '<a class="btn" href="contact.html">Être prévenu</a>'
             : '<button class="btn" data-add="' + esc(p.id) + '">Ajouter au panier</button>';
