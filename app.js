@@ -53,6 +53,12 @@
     }
     return prodPromise;
   }
+  function cmpPrice(p) { return p.compare_price_cents && p.price_cents != null && p.compare_price_cents > p.price_cents ? p.compare_price_cents : 0; }
+  function priceHtml(p) {
+    var c = cmpPrice(p);
+    if (!c) return "";
+    return '<span class="was">' + money(c) + '</span> <span class="badge sale">-' + Math.round((1 - p.price_cents / c) * 100) + ' %</span>';
+  }
   function productCard(p) {
     var u = safeUrl(p.image_url);
     var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0));
@@ -62,7 +68,7 @@
       : '<button class="btn small" data-add="' + esc(p.id) + '">Ajouter · ' + money(p.price_cents) + '</button>';
     return '<article class="card"><a class="img" href="produit.html?p=' + esc(p.slug) + '">' + img + '</a><div class="body">' +
       (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : '') +
-      '<h3>' + esc(p.name) + '</h3><p>' + esc(p.tagline || "") + '</p><div class="actions">' +
+      '<h3>' + esc(p.name) + '</h3><p>' + esc(p.tagline || "") + '</p>' + (cmpPrice(p) ? '<p class="price-line">' + priceHtml(p) + '</p>' : '') + '<div class="actions">' +
       '<a class="btn small ghost" href="produit.html?p=' + esc(p.slug) + '">Détails</a>' + buy + '</div></div></article>';
   }
   function giftCard(p) {
@@ -244,7 +250,7 @@
   document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + (C.email || ""); a.textContent = C.email || ""; });
 
   window.SLapp = {
-    sb: sb, esc: esc, money: money, dateFr: dateFr, safeUrl: safeUrl, extUrl: extUrl, extBtn: extBtn,
+    sb: sb, esc: esc, money: money, dateFr: dateFr, safeUrl: safeUrl, priceHtml: priceHtml, extUrl: extUrl, extBtn: extBtn,
     readCart: readCart, writeCart: writeCart, loadProducts: loadProducts,
     productCard: productCard, giftCard: giftCard, loadDrop: loadDrop, dropCard: dropCard
   };

@@ -172,3 +172,8 @@ footer.site .legal{border-top:1px solid #1d2026;margin-top:36px;padding-top:20px
 .marquee-group span::after{content:"\2022";position:absolute;right:-4px}
 @keyframes marquee{to{transform:translateX(-25%)}}
 @media (prefers-reduced-motion:reduce){.announce{white-space:normal;text-align:center;padding:9px 16px}.marquee-track{animation:none;width:auto}.marquee-group[aria-hidden]{display:none}.marquee-group{flex-wrap:wrap;justify-content:center}}
+
+.was{text-decoration:line-through;color:var(--muted);font-weight:500}
+.badge.sale{background:var(--lime);color:#111}
+.price-line{margin:0 0 8px;font-weight:600}
+.product-hero .desc{white-space:pre-line}

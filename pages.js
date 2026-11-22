@@ -160,8 +160,8 @@
         }
         view().innerHTML = '<div class="product-hero">' + media +
           "<div>" + (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : "") +
-          "<h1>" + esc(p.name) + '</h1><p class="tag">' + esc(p.tagline || "") + "</p><p>" + esc(p.description || "") + "</p>" +
-          '<div class="pr">' + (p.price_cents != null ? money(p.price_cents) + ' <small style="font-weight:500;color:var(--muted)">TTC</small>' : "Prix à venir") + "</div>" + buy + "</div></div>";
+          "<h1>" + esc(p.name) + '</h1><p class="tag">' + esc(p.tagline || "") + '</p><p class="desc">' + esc(p.description || "") + "</p>" +
+          '<div class="pr">' + (p.price_cents != null ? money(p.price_cents) + ' <small style="font-weight:500;color:var(--muted)">TTC</small> ' + S.priceHtml(p) : "Prix à venir") + "</div>" + buy + "</div></div>";
         if (mp) setup3d(mp);
       });
     },

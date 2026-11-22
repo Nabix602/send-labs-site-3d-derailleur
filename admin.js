@@ -56,6 +56,7 @@
           return '<div class="panel" data-pid="' + esc(p.id) + '"><div class="row2">' +
             '<label>Nom<input data-f="name" value="' + esc(p.name) + '"></label>' +
             '<label>Prix TTC en € (vide = sur demande)<input data-f="price" inputmode="decimal" value="' + (p.price_cents == null ? "" : esc((p.price_cents / 100).toFixed(2))) + '"></label>' +
+            '<label>Prix barré en € (ancien prix, facultatif)<input data-f="compare" inputmode="decimal" value="' + (p.compare_price_cents == null ? "" : esc((p.compare_price_cents / 100).toFixed(2))) + '"></label>' +
             '<label>Stock (vide = non suivi)<input data-f="stock" inputmode="numeric" value="' + (p.stock == null ? "" : esc(p.stock)) + '"></label>' +
             '<label>Statut<select data-f="status">' + opt("published", "Publié", p.status) + opt("soon", "Bientôt disponible", p.status) + opt("draft", "Brouillon (masqué)", p.status) + "</select></label>" +
             '<label>Ordre d\'affichage<input data-f="sort" inputmode="numeric" value="' + esc(p.sort_order) + '"></label>' +
@@ -160,13 +161,15 @@
     function f(n) { return panel.querySelector('[data-f="' + n + '"]'); }
     var price = toCents(f("price").value), stock = toInt(f("stock").value), sort = toInt(f("sort").value);
     if (price === undefined || stock === undefined || sort === undefined) return null;
+    var cmp = toCents(f("compare").value);
+    if (cmp === undefined) return null;
     var ext = f("external").value.trim();
     if (ext && !/^https:\/\/[^\s<>"]+$/.test(ext)) return null;
     return {
       name: f("name").value.trim(), price_cents: price, stock: stock, sort_order: sort === null ? 0 : sort,
       status: f("status").value, kind: f("kind").value, tagline: f("tagline").value.trim(),
       image_url: f("image").value.trim() || null, description: f("description").value.trim(),
-      external_url: ext || null
+      external_url: ext || null, compare_price_cents: cmp
     };
   }
 
