@@ -66,7 +66,13 @@
             (p.image_url ? '<div><img src="' + esc(S.safeUrl(p.image_url)) + '" alt="" style="max-height:110px;border-radius:10px;margin:6px 0"></div>' : '<p style="margin:4px 0;color:var(--muted);font-size:.85rem">Aucune photo.</p>') +
             '<input type="file" data-photo-file accept="image/jpeg,image/png,image/webp" style="max-width:100%">' +
             '<div style="margin-top:8px"><button class="btn small" type="button" data-action="upload-photo">Envoyer la photo</button></div>' +
-            '<p style="color:var(--muted);font-size:.8rem;margin-top:6px">JPG, PNG ou WebP, 5 Mo maximum. Ou collez une adresse ci-dessous.</p></div>' +
+            '<p style="color:var(--muted);font-size:.8rem;margin-top:6px">JPG, PNG ou WebP, 5 Mo maximum. Ou collez une adresse ci-dessous.</p>' +
+            '<div class="gal-box" data-gallery="' + esc(JSON.stringify(Array.isArray(p.gallery) ? p.gallery : [])) + '" style="margin-top:12px"><strong>Galerie (photos supplémentaires)</strong><div class="gal-list" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">' +
+            (Array.isArray(p.gallery) ? p.gallery : []).map(function (g) {
+              return '<span style="position:relative;display:inline-block"><img src="' + esc(S.safeUrl(g)) + '" alt="" style="height:64px;border-radius:8px;display:block"><button type="button" class="btn small ghost" data-action="remove-gallery" data-url="' + esc(g) + '" style="position:absolute;top:2px;right:2px;padding:0 7px;min-height:22px" aria-label="Retirer cette photo">×</button></span>';
+            }).join("") + '</div>' +
+            '<input type="file" data-gallery-file accept="image/jpeg,image/png,image/webp" style="max-width:100%"> ' +
+            '<button class="btn small" type="button" data-action="add-gallery">Ajouter à la galerie</button></div></div>' +
             '<label>Adresse de l\'image (https:// ou photos/nom.jpg)<input data-f="image" value="' + esc(p.image_url || "") + '"></label>' +
             '<label>Lien d\'achat externe, ex. annonce Vinted (https://…). S\'il est rempli, le bouton « Acheter » ouvre ce lien au lieu du panier. Vide = panier du site.<input data-f="external" inputmode="url" value="' + esc(p.external_url || "") + '"></label>' +
             '<label>Description<textarea data-f="description" rows="3">' + esc(p.description || "") + "</textarea></label>" +
@@ -205,6 +211,35 @@
           return sb.from("products").update({ image_url: pub }).eq("id", ppid).then(function (r) {
             if (r.error) { a.disabled = false; flash("Enregistrement impossible."); return; }
             show("products"); flash("Photo enregistrée.", true);
+          });
+        });
+      } else if (act === "add-gallery" || act === "remove-gallery") {
+        var panel = a.closest("[data-pid]"), gid = panel.getAttribute("data-pid");
+        var cur = [];
+        try { cur = JSON.parse(panel.querySelector(".gal-box").getAttribute("data-gallery") || "[]"); } catch (e) { cur = []; }
+        if (act === "remove-gallery") {
+          var u0 = a.getAttribute("data-url");
+          sb.from("products").update({ gallery: cur.filter(function (x) { return x !== u0; }) }).eq("id", gid).then(function (r) {
+            if (r.error) { flash("Retrait impossible."); return; }
+            show("products"); flash("Photo retirée de la galerie.", true);
+          });
+          return;
+        }
+        var gimg = panel.querySelector("[data-gallery-file]").files[0];
+        var gslug = panel.querySelector("[data-slug]").getAttribute("data-slug").toLowerCase().replace(/[^a-z0-9-]/g, "");
+        if (!gimg) { flash("Choisissez d'abord une image."); return; }
+        var gext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }[gimg.type];
+        if (!gext) { flash("Format accepté : JPG, PNG ou WebP."); return; }
+        if (gimg.size > 5 * 1024 * 1024) { flash("Image trop lourde (5 Mo maximum)."); return; }
+        if (cur.length >= 12) { flash("12 photos maximum dans la galerie."); return; }
+        var gpath = gslug + "-g" + Date.now() + "." + gext;
+        a.disabled = true; flash("Envoi en cours…", true);
+        sb.storage.from("product-images").upload(gpath, gimg, { contentType: gimg.type, upsert: false }).then(function (up) {
+          if (up.error) { a.disabled = false; flash("Envoi impossible."); return; }
+          var gpub = sb.storage.from("product-images").getPublicUrl(gpath).data.publicUrl;
+          return sb.from("products").update({ gallery: cur.concat([gpub]) }).eq("id", gid).then(function (r) {
+            if (r.error) { a.disabled = false; flash("Enregistrement impossible."); return; }
+            show("products"); flash("Photo ajoutée à la galerie.", true);
           });
         });
       } else if (act === "upload-model" || act === "remove-model") {

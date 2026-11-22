@@ -219,3 +219,11 @@ body.locked{background:#0a0a0a;color:#fff}
 .viewer-tools .tool{font:inherit;font-size:.75rem;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer}
 .viewer-tools .tool.on{background:#111;color:#fff;border-color:#111}
 .viewer:fullscreen{width:100vw;height:100vh;aspect-ratio:auto;border-radius:0;background:#e9ecf1}
+
+/* Galerie produit */
+.photo-wrap{min-width:0}
+.thumbs{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.thumb{padding:0;width:68px;height:68px;border-radius:12px;border:2px solid transparent;background:var(--surface);cursor:pointer;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb.on{border-color:#111}
+.media .photo-wrap[hidden]{display:none}

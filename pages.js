@@ -25,7 +25,7 @@
 
   // Onglets Photo / Vue 3D : la visionneuse (three.js) n'est chargée qu'au premier clic sur « Vue 3D ».
   function setup3d(path) {
-    var photo = document.getElementById("media-photo"), box = document.getElementById("media-3d");
+    var photo = document.querySelector(".photo-wrap") || document.getElementById("media-photo"), box = document.getElementById("media-3d");
     var tabs = document.querySelectorAll("[data-media]");
     if (!photo || !box) return;
     var state = "idle", api = null;
@@ -178,7 +178,11 @@
             ? '<a class="btn" href="contact.html">Être prévenu</a>'
             : '<button class="btn" data-add="' + esc(p.id) + '">Ajouter au panier</button>';
         var mp = typeof p.model_path === "string" && /^[a-z0-9._-]+\.stl$/i.test(p.model_path) ? p.model_path : null;
-        var media = '<div class="img" id="media-photo">' + (u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '">' : esc(p.name.charAt(0))) + "</div>";
+        var imgs = (u ? [u] : []).concat((Array.isArray(p.gallery) ? p.gallery : []).map(S.safeUrl).filter(Boolean));
+        var media = '<div class="photo-wrap"><div class="img" id="media-photo">' + (u ? '<img id="main-img" src="' + esc(u) + '" alt="' + esc(p.name) + '">' : esc(p.name.charAt(0))) + "</div>" +
+          (imgs.length > 1 ? '<div class="thumbs">' + imgs.map(function (src, i) {
+            return '<button type="button" class="thumb' + (i === 0 ? " on" : "") + '" data-thumb="' + esc(src) + '" aria-label="Photo ' + (i + 1) + '"><img src="' + esc(src) + '" alt="" loading="lazy"></button>';
+          }).join("") + "</div>" : "") + "</div>";
         if (mp) {
           media = '<div class="media">' +
             '<div class="media-tabs"><button type="button" class="on" data-media="photo">Photo</button><button type="button" data-media="3d">Vue 3D</button></div>' +
@@ -188,6 +192,13 @@
           "<div>" + (p.status === "soon" ? '<span class="badge">Bientôt disponible</span>' : "") +
           "<h1>" + esc(p.name) + '</h1><p class="tag">' + esc(p.tagline || "") + '</p><p class="desc">' + esc(p.description || "") + "</p>" +
           '<div class="pr">' + (p.price_cents != null ? money(p.price_cents) + ' <small style="font-weight:500;color:var(--muted)">TTC</small> ' + S.priceHtml(p) : "Prix à venir") + "</div>" + buy + "</div></div>";
+        Array.prototype.forEach.call(document.querySelectorAll("[data-thumb]"), function (b) {
+          b.addEventListener("click", function () {
+            var m = document.getElementById("main-img");
+            if (m) m.src = b.getAttribute("data-thumb");
+            Array.prototype.forEach.call(document.querySelectorAll("[data-thumb]"), function (x) { x.classList.toggle("on", x === b); });
+          });
+        });
         if (mp) setup3d(mp);
       });
     },
