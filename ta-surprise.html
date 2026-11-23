@@ -3,29 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ta surprise – SendLabs</title>
-<meta name="description" content="Déclare ton achat pour recevoir ta surprise SendLabs.">
+<title>Ta surprise | SendLabs</title>
+<meta name="description" content="Merci pour ta commande SendLabs ! Découvre ton code cadeau et indique le code de ton ambassadeur.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="stylesheet" href="style.css">
 </head>
-<body data-page="static">
+<body data-page="surprise">
 <header id="site-header"></header>
 <main class="wrap">
-<div class="page-title"><h1>Merci pour ta commande !</h1><p>Déclare ton achat pour recevoir ta surprise SendLabs : <strong>-10 % sur ta prochaine commande</strong>.</p></div>
-<section class="block">
-<form data-submit="surprise" data-success="Merci ! Ta déclaration est enregistrée. On vérifie ta commande et on revient vers toi avec ta surprise.">
-  <p hidden><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
-  <label>Nom ou pseudo utilisé pour la commande<input name="pseudo_achat" required maxlength="120"></label>
-  <label>Produit acheté<select name="produit"><option>Send Cage</option><option>Protège-dérailleur</option><option>Protège-disque de frein</option><option>Garde-boue</option><option>Carte cadeau</option><option>Autre</option></select></label>
-  <label>Qui t'a fait découvrir SendLabs ? (code ambassadeur)<input name="code_ambassadeur" maxlength="60" placeholder="Laisse vide si personne"></label>
-  <label>E-mail<input type="email" name="email" required maxlength="200"></label>
-  <label class="check"><input type="checkbox" name="consentement" value="oui" required> J'accepte que ces informations soient utilisées pour vérifier ma commande et m'envoyer ma surprise (<a href="confidentialite.html" style="text-decoration:underline">confidentialité</a>).</label>
-  <button class="btn" type="submit">Recevoir ma surprise</button></form></section></main>
+<div class="page-title"><p style="color:#B9F000;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Merci de rouler SendLabs</p><h1>Ta surprise est là.</h1>
+<p>Merci pour ta commande ! Ta pièce a été imprimée et contrôlée dans notre atelier des Yvelines. Pour te remercier, voici un cadeau pour ta prochaine commande.</p></div>
+<section class="block" style="max-width:640px"><div id="gift"><div class="notice">Chargement…</div></div></section>
+<section class="block prose" style="max-width:640px"><h2>Un ambassadeur t'a fait découvrir SendLabs ?</h2>
+<p>Indique son code ici : il gagne des points à chaque commande déclarée. Ça prend 20 secondes.</p>
+<div id="amb"></div></section>
+<section class="block" style="max-width:900px"><div class="grid" style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+<div class="panel"><h3>Montre-nous ton vélo équipé</h3><p>Poste une photo de ta pièce montée et identifie @send_labs sur Instagram. On repartage nos préférées.</p><a class="btn small" href="https://www.instagram.com/send_labs" target="_blank" rel="noopener">Suivre @send_labs</a></div>
+<div class="panel" style="border-color:#B9F000"><h3>Toi aussi, gagne des récompenses</h3><p>Deviens ambassadeur : partage ton code et cumule des points à échanger contre des pièces SendLabs.</p><a class="btn small" href="ambassadeurs.html">Devenir ambassadeur</a></div>
+<div class="panel"><h3>Besoin d'aide pour le montage ?</h3><p>Une question sur ta pièce ou sur ton vélo ? Écris à l'atelier, on te répond.</p><a class="btn small" href="contact.html">Contacter l'atelier</a></div>
+</div></section></main>
 <footer id="site-footer"></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script src="pages.js"></script>
-</body>
-</html>
+</body></html>

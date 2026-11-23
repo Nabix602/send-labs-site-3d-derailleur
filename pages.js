@@ -19,6 +19,9 @@
       return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>Commande ' + esc(o.id.slice(0, 8)) +
         '</strong><span class="status">' + esc(STATUS[o.status] || o.status) + "</span></div>" +
         '<p style="color:var(--muted);font-size:.85rem">' + esc(S.dateFr(o.created_at)) + "</p><p>" + items + "</p>" +
+        (o.discount_cents ? "<p>Réduction " + esc(o.discount_code || "") + " : −" + money(o.discount_cents) + "</p>" : "") +
+        (o.shipping_method ? "<p>Livraison : " + (o.shipping_cents ? money(o.shipping_cents) : "offerte") + (o.relay_point ? " — relais : " + esc(o.relay_point) : "") + "</p>" : "") +
+        (o.tracking_number ? "<p>Suivi " + esc(o.carrier || "") + " : <strong>" + esc(o.tracking_number) + "</strong></p>" : "") +
         '<p><strong>Total : ' + money(o.total_cents) + "</strong></p></div>";
     }).join("");
   }
@@ -208,6 +211,8 @@
         var list = res[0], drop = res[1];
         var map = {};
         list.forEach(function (p) { map[p.id] = p; });
+        var ship = [], payInfo = "", code = "";
+        try { code = localStorage.getItem("sl_code") || ""; } catch (e) {}
 
         function lines() {
           var c = S.readCart().filter(function (i) {
@@ -218,41 +223,89 @@
           S.writeCart(c);
           return c;
         }
+        function items() { return lines().map(function (i) { return { product_id: i.id, quantity: i.qty }; }); }
+        function onlyGift() { return lines().every(function (i) { return map[i.id].kind === "gift_card"; }); }
+        function val(n) { var el = document.querySelector('#checkout [name="' + n + '"]'); return el ? el.value : ""; }
+        function chosen() { var r = document.querySelector('#checkout input[name="ship"]:checked'); return r ? r.value : null; }
+
+        function recap() {
+          var box = document.getElementById("recap"), err = document.getElementById("code-msg");
+          if (!box) return Promise.resolve();
+          var sh = onlyGift() ? null : chosen();
+          return sb.rpc("quote_order", { p_items: items(), p_shipping: sh, p_code: code || null }).then(function (r) {
+            if (r.error && code) {
+              err.textContent = r.error.message; err.className = "form-error";
+              code = ""; try { localStorage.removeItem("sl_code"); } catch (e) {}
+              return recap();
+            }
+            if (r.error) { box.innerHTML = notice(r.error.message); return; }
+            var q = r.data;
+            err.textContent = q.discount_code ? "Code " + q.discount_code + " appliqué." : ""; err.className = q.discount_code ? "ok" : "";
+            box.innerHTML = '<div class="total-row"><span>Sous-total</span><span>' + money(q.subtotal) + "</span></div>" +
+              (q.discount ? '<div class="total-row"><span>Réduction ' + esc(q.discount_code) + "</span><span>−" + money(q.discount) + "</span></div>" : "") +
+              (q.only_gift ? "" : '<div class="total-row"><span>Livraison</span><span>' + (q.shipping_method ? (q.shipping ? money(q.shipping) : "Offerte") : "—") + "</span></div>") +
+              '<div class="total-row"><strong>Total TTC</strong><strong>' + money(q.total) + "</strong></div>";
+            var rel = document.getElementById("relay-box");
+            if (rel) rel.hidden = !q.requires_relay;
+          });
+        }
 
         function draw() {
           var c = lines();
           if (!c.length) {
-            view().innerHTML = notice("Votre panier est vide.") + '<p style="text-align:center;margin-top:20px"><a class="btn" href="boutique.html">Voir la boutique</a></p>';
+            view().innerHTML = notice("Ton panier est vide.") + '<p style="text-align:center;margin-top:20px"><a class="btn" href="boutique.html">Voir la boutique</a></p>';
             return Promise.resolve();
           }
-          var total = 0;
           var html = c.map(function (i) {
-            total += i.price * i.qty;
             return '<div class="cart-line"><div><strong>' + esc(i.name) + '</strong><div style="color:var(--muted);font-size:.85rem">' + money(i.price) + '</div></div>' +
               '<div class="qty"><button data-q="' + esc(i.id) + '" data-d="-1" aria-label="Moins">−</button><span>' + i.qty + '</span><button data-q="' + esc(i.id) + '" data-d="1" aria-label="Plus">+</button></div>' +
               "<strong>" + money(i.price * i.qty) + '</strong><button class="btn small ghost" data-rm="' + esc(i.id) + '">Retirer</button></div>';
           }).join("");
-          html += '<div class="total-row"><span>Total TTC</span><span>' + money(total) + "</span></div>";
           return session().then(function (s) {
             if (!s) {
-              html += notice("Connectez-vous ou créez un compte pour finaliser votre commande.") +
+              html += notice("Connecte-toi ou crée un compte pour finaliser ta commande.") +
                 '<p style="text-align:center;margin-top:16px"><a class="btn" href="connexion.html?next=panier.html">Se connecter pour commander</a></p>';
               view().innerHTML = html;
               return;
             }
-            return sb.from("profiles").select("full_name").eq("id", s.user.id).maybeSingle().then(function (p) {
-              html += '<h2 style="text-align:left;font-size:1.3rem;margin-top:30px">Livraison</h2>' +
-                '<form id="checkout"><label>Nom complet<input name="full_name" required maxlength="120" value="' + esc((p.data && p.data.full_name) || "") + '"></label>' +
+            return Promise.all([
+              sb.from("profiles").select("full_name").eq("id", s.user.id).maybeSingle(),
+              sb.from("shipping_methods").select("*").eq("active", true).order("sort_order"),
+              sb.from("site_settings").select("value").eq("key", "payment_instructions").maybeSingle()
+            ]).then(function (r) {
+              ship = r[1].data || []; payInfo = (r[2].data && r[2].data.value) || "";
+              var gift = onlyGift();
+              html += '<form id="checkout" style="margin-top:24px"><h2 style="text-align:left;font-size:1.3rem">Livraison</h2>' +
+                '<label>Nom complet<input name="full_name" required maxlength="120" value="' + esc((r[0].data && r[0].data.full_name) || "") + '"></label>' +
                 '<label>Téléphone<input name="phone" maxlength="30" inputmode="tel"></label>' +
-                '<label>Adresse de livraison<textarea name="address" rows="3" required maxlength="400"></textarea></label>' +
+                '<label>' + (gift ? "Adresse (facturation)" : "Adresse de livraison") + '<textarea name="address" rows="3" required maxlength="400"></textarea></label>';
+              if (!gift) {
+                html += ship.map(function (m, k) {
+                  return '<label class="check"><input type="radio" name="ship" value="' + esc(m.code) + '"' + (k === 0 ? " checked" : "") + "> <span><strong>" + esc(m.name) + "</strong> — " +
+                    (m.price_cents ? money(m.price_cents) : "offerte") + (m.free_from_cents ? " (offerte dès " + money(m.free_from_cents) + ")" : "") +
+                    '<br><small style="color:var(--muted)">' + esc(m.description || "") + "</small></span></label>";
+                }).join("") +
+                '<div id="relay-box"><label>Ton point relais<input name="relay" maxlength="200" placeholder="Nom du point, adresse, ville (ou n° du relais)"></label>' +
+                '<small style="color:var(--muted)">Cherche le point le plus proche sur <a href="https://www.mondialrelay.fr/" target="_blank" rel="noopener" style="text-decoration:underline">mondialrelay.fr</a> et recopie son nom et son adresse.</small></div>';
+              }
+              html += '<label>Code promo<span style="display:flex;gap:8px"><input name="code" maxlength="30" value="' + esc(code) + '" style="text-transform:uppercase"><button class="btn small ghost" type="button" id="apply-code">Appliquer</button></span></label><div id="code-msg"></div>' +
                 '<label>Note (facultatif)<textarea name="note" rows="2" maxlength="400"></textarea></label>' +
+                '<div id="recap" style="margin:18px 0"></div>' +
+                '<div class="notice"><strong>Paiement par virement.</strong> Après validation, tu reçois les coordonnées bancaires ici et dans ton espace client. La commande est expédiée dès réception du virement.' +
+                (payInfo ? '<br>' + esc(payInfo).replace(/\n/g, "<br>") : "") + "</div>" +
                 '<button class="btn" type="submit">Valider la commande</button><div class="form-error" id="co-err"></div></form>';
               view().innerHTML = html;
+              return recap();
             });
           });
         }
 
         view().addEventListener("click", function (e) {
+          if (e.target.id === "apply-code") {
+            code = val("code").trim().toUpperCase();
+            try { code ? localStorage.setItem("sl_code", code) : localStorage.removeItem("sl_code"); } catch (er) {}
+            recap(); return;
+          }
           var q = e.target.closest("[data-q]"), rm = e.target.closest("[data-rm]");
           if (!q && !rm) return;
           var c = S.readCart().slice();
@@ -265,30 +318,84 @@
           S.writeCart(c);
           draw();
         });
+        view().addEventListener("change", function (e) { if (e.target.name === "ship") recap(); });
 
         view().addEventListener("submit", function (e) {
           if (e.target.id !== "checkout") return;
           e.preventDefault();
-          var f = e.target, fd = new FormData(f), btn = f.querySelector("button[type=submit]");
+          var f = e.target, fd = new FormData(f), btn = f.querySelector("button[type=submit]"), err = document.getElementById("co-err");
+          var gift = onlyGift();
+          if (!gift && (document.getElementById("relay-box") || {}).hidden === false && !String(fd.get("relay") || "").trim()) {
+            err.textContent = "Indique ton point relais."; return;
+          }
           btn.disabled = true;
-          var items = lines().map(function (i) { return { product_id: i.id, quantity: i.qty }; });
           sb.rpc("place_order", {
-            p_items: items, p_full_name: fd.get("full_name"), p_phone: fd.get("phone"),
-            p_address: fd.get("address"), p_note: fd.get("note")
+            p_items: items(), p_full_name: fd.get("full_name"), p_phone: fd.get("phone"),
+            p_address: fd.get("address"), p_note: fd.get("note"),
+            p_shipping: gift ? null : chosen(), p_relay: gift ? null : (fd.get("relay") || null), p_code: code || null
           }).then(function (r) {
-            if (r.error) {
-              btn.disabled = false;
-              document.getElementById("co-err").textContent = "Commande impossible : " + r.error.message;
-              return;
-            }
+            if (r.error) { btn.disabled = false; err.textContent = "Commande impossible : " + r.error.message; return; }
             S.writeCart([]);
+            try { localStorage.removeItem("sl_code"); } catch (er) {}
             view().innerHTML = '<div class="ok"><strong>Commande enregistrée (n° ' + esc(String(r.data).slice(0, 8)) + ').</strong><br>' +
-              "Nous vous envoyons les instructions de paiement par e-mail. Votre commande est suivie dans votre espace client.</div>" +
+              "Règle le montant par virement en indiquant ce numéro en référence." + (payInfo ? "<br><br>" + esc(payInfo).replace(/\n/g, "<br>") : "<br>Les coordonnées bancaires te sont envoyées par l'atelier.") +
+              "<br><br>Suis ta commande dans ton espace client.</div>" +
               '<p style="text-align:center;margin-top:20px"><a class="btn" href="compte.html">Voir mes commandes</a></p>';
           });
         });
 
         return draw();
+      });
+    },
+
+    surprise: function () {
+      var token = (qs("c") || "").toLowerCase(), valid = /^[a-f0-9]{16}$/.test(token);
+      var gift = document.getElementById("gift"), amb = document.getElementById("amb");
+      function giftHtml(code, note) {
+        return '<div class="panel" style="text-align:center;border:2px dashed #B9F000;background:#fff;color:#0F1115"><p>Ton code cadeau</p>' +
+          '<p style="font-size:2.4rem;font-weight:900;letter-spacing:.06em;margin:6px 0">' + esc(code) + "</p><p><strong>−10 % sur ta prochaine commande</strong></p>" +
+          "<p><small>" + esc(note) + '</small></p><button class="btn" id="use-code" data-code="' + esc(code) + '">Utiliser mon code</button></div>';
+      }
+      function generic() {
+        gift.innerHTML = giftHtml("MERCI10", "Utilisable une fois sur la boutique en ligne. Le bouton applique le code automatiquement.");
+      }
+      function fallbackForm() {
+        amb.innerHTML = '<form data-submit="surprise" data-success="Merci ! Le code est bien enregistré, l\'ambassadeur recevra ses points après vérification de ta commande.">' +
+          '<p hidden><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>' +
+          '<label>Code ambassadeur<input name="code_ambassadeur" required maxlength="60"></label>' +
+          '<label>Numéro de commande<input name="commande" required maxlength="40"><small>Il est dans ton e-mail de confirmation ou ton espace client.</small></label>' +
+          '<label>E-mail utilisé pour la commande<input type="email" name="email" required maxlength="200"></label>' +
+          '<button class="btn" type="submit">Valider le code</button></form>';
+      }
+      document.addEventListener("click", function (e) {
+        var b = e.target.closest("#use-code");
+        if (!b) return;
+        try { localStorage.setItem("sl_code", b.getAttribute("data-code")); } catch (er) {}
+        location.href = "boutique.html";
+      });
+      if (!valid) { generic(); fallbackForm(); return Promise.resolve(); }
+      return sb.rpc("get_surprise", { p_token: token }).then(function (r) {
+        var st = r.data;
+        if (!st) { generic(); fallbackForm(); return; }
+        if (st.status === "paid" || st.status === "shipped") {
+          return sb.rpc("claim_surprise", { p_token: token }).then(function (c) {
+            if (c.data) gift.innerHTML = giftHtml(c.data, "Code personnel, utilisable une seule fois sur la boutique en ligne. Le bouton applique le code automatiquement."); else generic();
+          }).then(function () {
+            if (st.ambassador) { amb.innerHTML = '<div class="ok">Merci ! Le code ambassadeur est déjà enregistré pour cette commande.</div>'; return; }
+            amb.innerHTML = '<form id="amb-form"><label>Code ambassadeur<input name="code" required maxlength="30" style="text-transform:uppercase"></label><button class="btn" type="submit">Valider le code</button><div class="form-error"></div></form>';
+            document.getElementById("amb-form").addEventListener("submit", function (e) {
+              e.preventDefault();
+              var f = e.target, v = f.code.value;
+              sb.rpc("set_surprise_ambassador", { p_token: token, p_code: v }).then(function (x) {
+                if (x.error) { f.querySelector(".form-error").textContent = x.error.message; return; }
+                amb.innerHTML = '<div class="ok">Merci ! Le code est bien enregistré, l\'ambassadeur recevra ses points après vérification de ta commande.</div>';
+              });
+            });
+          });
+        }
+        gift.innerHTML = notice(st.status === "pending" ? "Ta commande n'est pas encore confirmée : ton code personnel apparaîtra dès réception du paiement. En attendant, voici un code pour la prochaine." : "Cette commande est annulée.");
+        if (st.status === "pending") { gift.innerHTML += giftHtml("MERCI10", "Utilisable une fois sur la boutique en ligne."); }
+        fallbackForm();
       });
     },
 
