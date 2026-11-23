@@ -12,13 +12,14 @@ Quand tu reprends cette session : lis ce fichier, fais les points non cochés da
 ## À faire (Claude)
 - [ ] E-mails automatiques (confirmation, expédition) : Edge Function + Resend (gratuit 3000/mois, clé à fournir par Esteban) — non faits
 - [ ] Lien de suivi Mondial Relay cliquable (format d'URL à vérifier)
-- [ ] Appliquer le style sombre « lime & noir » (captures Shopify) au site Vercel
+- [x] Style sombre « lime & noir » appliqué par surcouche CSS (à contrôler visuellement page par page)
 - [ ] Test navigateur complet (panier → commande → admin « payée » → QR → code MERCI-xxxxxx)
-- [ ] Paiement par carte Stripe (Edge Functions `create-checkout` + `stripe-webhook`, sans abonnement : 1,5 % + 0,25 € par paiement ; clés à mettre par Esteban dans Supabase)
+- [x] Paiement par carte Stripe : fonctions écrites, testées avec simulation et déployées ; **inactif** tant qu'Esteban n'a pas créé un compte Stripe, ajouté les 2 secrets et configuré le webhook (voir README)
 - [ ] Widget officiel Mondial Relay (nécessite code enseigne Mondial Relay ; sinon saisie manuelle)
-- [ ] Admin : ajouter/supprimer des modes de livraison ; table `ambassadors` pour valider les codes
+- [x] Admin : ajout de modes de livraison
+- [ ] Table `ambassadors` pour valider les codes ambassadeurs
 - [ ] Page carte cadeau au style du site ; pages légales (CGV, mentions, remboursement) à compléter
-- [ ] README : décrire le fonctionnement boutique/QR
+- [x] README
 
 ## À faire (Esteban)
 - [ ] Supabase > Auth > URL Configuration : Site URL `https://sendlabs-site-omega.vercel.app` + Redirect `https://sendlabs-site-omega.vercel.app/**`
@@ -26,3 +27,4 @@ Quand tu reprends cette session : lis ce fichier, fais les points non cochés da
 - [ ] Remplir l'IBAN dans Admin > Livraison & promos > Instructions de paiement
 - [ ] Mettre les vrais stocks (tous à 0 / non suivis), e-mail de contact réel (config.js)
 - [ ] Statut juridique (micro-entreprise) avant la 1re vente
+- [ ] Esteban : créer compte Stripe + secrets + webhook (optionnel)

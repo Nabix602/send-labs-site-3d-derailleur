@@ -200,8 +200,10 @@
         sb.from("shipping_methods").select("*").order("sort_order"),
         sb.from("discount_codes").select("*").order("created_at", { ascending: false }).limit(200),
         sb.from("orders").select("ambassador_code,subtotal_cents,discount_cents,status").not("ambassador_code", "is", null).in("status", ["paid", "shipped"]),
-        sb.from("site_settings").select("value").eq("key", "payment_instructions").maybeSingle()
+        sb.from("site_settings").select("value").eq("key", "payment_instructions").maybeSingle(),
+        sb.from("site_settings").select("value").eq("key", "payment_card_enabled").maybeSingle()
       ]).then(function (r) {
+        r[4] = r[4].data && r[4].data.value;
         var ship = r[0].data || [], codes = r[1].data || [], amb = {};
         (r[2].data || []).forEach(function (o) {
           var a = amb[o.ambassador_code] = amb[o.ambassador_code] || { n: 0, pts: 0 };
@@ -211,14 +213,14 @@
           return '<div data-ship="' + esc(m.id) + '" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:8px"><label>Nom<input data-s="name" value="' + esc(m.name) + '"></label>' +
             '<label>Prix €<input data-s="price" size="5" value="' + (m.price_cents / 100) + '"></label><label>Offerte dès € (vide = jamais)<input data-s="free" size="5" value="' + (m.free_from_cents == null ? "" : m.free_from_cents / 100) + '"></label>' +
             '<label class="check"><input type="checkbox" data-s="active"' + (m.active ? " checked" : "") + '> Actif</label><button class="btn small" data-action="save-ship">Enregistrer</button></div>';
-        }).join("") + "</div>";
+        }).join("") + '<form id="ship-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:10px"><label>Nouveau mode<input name="name" required maxlength="80" placeholder="Colissimo domicile"></label><label>Prix €<input name="price" size="5" required></label><label class="check"><input type="checkbox" name="relay"> Point relais</label><button class="btn small" type="submit">Ajouter</button></form></div>';
         h += '<div class="panel"><h3>Codes promo</h3><form id="code-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end"><label>Code<input name="code" required maxlength="30"></label><label>%<input name="percent" size="3" required></label><label>Utilisations max (vide = illimité)<input name="max" size="4"></label><button class="btn small" type="submit">Créer</button></form>' +
           '<table class="table" style="width:100%;margin-top:10px"><tr><th>Code</th><th>%</th><th>Utilisé</th><th></th></tr>' + codes.map(function (c) {
             return "<tr><td>" + esc(c.code) + "</td><td>" + c.percent + "</td><td>" + c.uses + (c.max_uses ? " / " + c.max_uses : "") + '</td><td><button class="btn small ghost" data-action="toggle-code" data-id="' + esc(c.code) + '" data-on="' + (c.active ? 1 : 0) + '">' + (c.active ? "Désactiver" : "Activer") + "</button></td></tr>";
           }).join("") + "</table></div>";
         var ak = Object.keys(amb).sort(function (a, b) { return amb[b].pts - amb[a].pts; });
         h += '<div class="panel"><h3>Points ambassadeurs (10 pts/€, taux de base)</h3>' + (ak.length ? '<table class="table" style="width:100%"><tr><th>Code</th><th>Commandes</th><th>Points</th></tr>' + ak.map(function (k) { return "<tr><td>" + esc(k) + "</td><td>" + amb[k].n + "</td><td>" + amb[k].pts + "</td></tr>"; }).join("") + "</table>" : "<p>Aucun code déclaré pour le moment.</p>") + "</div>";
-        h += '<div class="panel"><h3>Instructions de paiement (virement)</h3><form id="pay-form"><label>IBAN / titulaire / consignes (affiché au client après la commande)<textarea name="v" rows="3" maxlength="600">' + esc((r[3].data && r[3].data.value) || "") + '</textarea></label><button class="btn small" type="submit">Enregistrer</button></form></div>';
+        h += '<div class="panel"><h3>Instructions de paiement (virement)</h3><form id="pay-form"><label class="check"><input type="checkbox" name="card"' + (r[4] === "1" ? " checked" : "") + '> Activer le paiement par carte (Stripe) — seulement après avoir ajouté les clés dans Supabase</label><label>IBAN / titulaire / consignes (affiché au client après la commande)<textarea name="v" rows="3" maxlength="600">' + esc((r[3].data && r[3].data.value) || "") + '</textarea></label><button class="btn small" type="submit">Enregistrer</button></form></div>';
         body().innerHTML = h;
       });
     },
@@ -273,9 +275,14 @@
       var f = e.target, p = parseInt(f.percent.value, 10), mx = f.max.value.trim() ? parseInt(f.max.value, 10) : null;
       if (!(p >= 1 && p <= 90)) { flash("Pourcentage entre 1 et 90."); return; }
       sb.from("discount_codes").insert({ code: f.code.value.trim().toUpperCase(), percent: p, max_uses: mx, per_user_once: true }).then(function (x) { if (x.error) flash("Création impossible (code déjà pris ?)."); else { show("shop"); flash("Code créé.", true); } });
+    } else if (e.target.id === "ship-form") {
+      e.preventDefault();
+      var sf = e.target, pc = toCents(sf.price.value);
+      if (pc == null) { flash("Prix invalide."); return; }
+      sb.from("shipping_methods").insert({ code: sf.name.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "mode-" + Date.now(), name: sf.name.value.trim(), price_cents: pc, requires_relay: sf.relay.checked, sort_order: 10 }).then(function (x) { if (x.error) flash("Ajout impossible."); else { show("shop"); flash("Mode ajouté.", true); } });
     } else if (e.target.id === "pay-form") {
       e.preventDefault();
-      sb.from("site_settings").upsert({ key: "payment_instructions", value: e.target.v.value }).then(function (x) { flash(x.error ? "Enregistrement impossible." : "Instructions enregistrées.", !x.error); });
+      sb.from("site_settings").upsert([{ key: "payment_instructions", value: e.target.v.value }, { key: "payment_card_enabled", value: e.target.card.checked ? "1" : "0" }]).then(function (x) { flash(x.error ? "Enregistrement impossible." : "Instructions enregistrées.", !x.error); });
     }
   });
 

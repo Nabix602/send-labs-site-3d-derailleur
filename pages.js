@@ -211,7 +211,7 @@
         var list = res[0], drop = res[1];
         var map = {};
         list.forEach(function (p) { map[p.id] = p; });
-        var ship = [], payInfo = "", code = "";
+        var ship = [], payInfo = "", code = "", cardOn = false;
         try { code = localStorage.getItem("sl_code") || ""; } catch (e) {}
 
         function lines() {
@@ -271,9 +271,9 @@
             return Promise.all([
               sb.from("profiles").select("full_name").eq("id", s.user.id).maybeSingle(),
               sb.from("shipping_methods").select("*").eq("active", true).order("sort_order"),
-              sb.from("site_settings").select("value").eq("key", "payment_instructions").maybeSingle()
+              sb.from("site_settings").select("key,value").in("key", ["payment_instructions", "payment_card_enabled"])
             ]).then(function (r) {
-              ship = r[1].data || []; payInfo = (r[2].data && r[2].data.value) || "";
+              ship = r[1].data || []; (r[2].data || []).forEach(function (x) { if (x.key === "payment_instructions") payInfo = x.value || ""; if (x.key === "payment_card_enabled") cardOn = x.value === "1"; });
               var gift = onlyGift();
               html = '<form id="checkout" class="co-grid"><div class="co-main">' + html + '<h2 style="text-align:left;font-size:1.3rem;margin-top:26px">Livraison</h2>' +
                 '<label>Nom complet<input name="full_name" required maxlength="120" value="' + esc((r[0].data && r[0].data.full_name) || "") + '"></label>' +
@@ -292,8 +292,8 @@
                 '<aside class="co-side panel"><h3>Récapitulatif</h3>' +
                 '<label>Code promo<span style="display:flex;gap:8px"><input name="code" maxlength="30" value="' + esc(code) + '" style="text-transform:uppercase"><button class="btn small ghost" type="button" id="apply-code">Appliquer</button></span></label><div id="code-msg"></div>' +
                 '<div id="recap" style="margin:10px 0"></div><h3>Comment tu paies</h3>' +
-                '<label class="pay-opt"><input type="radio" name="pay" checked> <span><strong>Virement bancaire</strong><br><small style="color:var(--muted)">Coordonnées affichées après la commande. Expédition dès réception.</small></span></label>' +
-                '<div class="pay-opt off"><input type="radio" disabled> <span><strong>Carte bancaire</strong> <small>(bientôt)</small></span></div>' +
+                '<label class="pay-opt"><input type="radio" name="pay" value="virement" checked> <span><strong>Virement bancaire</strong><br><small style="color:var(--muted)">Coordonnées affichées après la commande. Expédition dès réception.</small></span></label>' +
+                (cardOn ? '<label class="pay-opt"><input type="radio" name="pay" value="card"> <span><strong>Carte bancaire</strong><br><small style="color:var(--muted)">Paiement sécurisé par Stripe.</small></span></label>' : '<div class="pay-opt off"><input type="radio" disabled> <span><strong>Carte bancaire</strong> <small>(bientôt)</small></span></div>') +
                 (payInfo ? '<p style="font-size:.85rem;color:var(--muted)">' + esc(payInfo).replace(/\n/g, "<br>") + "</p>" : "") +
                 '<button class="btn" type="submit" style="width:100%">Valider la commande</button><div class="form-error" id="co-err"></div>' +
                 '<p style="font-size:.8rem;color:var(--muted)">Un numéro de commande et un suivi te sont donnés dans ton espace client.</p></aside></form>';
@@ -340,6 +340,13 @@
             if (r.error) { btn.disabled = false; err.textContent = "Commande impossible : " + r.error.message; return; }
             S.writeCart([]);
             try { localStorage.removeItem("sl_code"); } catch (er) {}
+            if (fd.get("pay") === "card") {
+              view().innerHTML = notice("Redirection vers le paiement sécurisé…");
+              return sb.functions.invoke("create-checkout", { body: { order_id: r.data } }).then(function (c) {
+                if (c.data && c.data.url) { location.href = c.data.url; return; }
+                view().innerHTML = '<div class="ok">Ta commande est enregistrée mais le paiement par carte n\'a pas pu démarrer. Tu peux la régler par virement depuis ton espace client, ou nous écrire.</div><p style="text-align:center;margin-top:20px"><a class="btn" href="compte.html">Voir mes commandes</a></p>';
+              });
+            }
             sb.from("orders").select("order_number,total_cents").eq("id", r.data).maybeSingle().then(function (o) {
             var num = o.data ? "SL-" + o.data.order_number : String(r.data).slice(0, 8);
             view().innerHTML = '<div class="ok"><strong>Commande enregistrée : ' + esc(num) + (o.data ? " — " + money(o.data.total_cents) : "") + '.</strong><br>' +

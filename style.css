@@ -229,3 +229,27 @@ body.locked{background:#0a0a0a;color:#fff}
 .media .photo-wrap[hidden]{display:none}
 
 .co-grid{display:grid;grid-template-columns:1fr 380px;gap:28px;align-items:start}.co-side{position:sticky;top:96px}.co-side h3{margin:0 0 10px}.pay-opt{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin:6px 0}.pay-opt.off{opacity:.5}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px}.kpi b{display:block;font-size:1.6rem}.kpi span{color:var(--muted);font-size:.85rem}.bars{display:flex;align-items:flex-end;gap:4px;height:90px}.bars i{flex:1;background:#B9F000;border-radius:3px 3px 0 0;min-height:2px}@media(max-width:900px){.co-grid{grid-template-columns:1fr}.co-side{position:static}}
+
+/* ===== Thème « lime & noir » (style de la boutique Shopify) ===== */
+:root{--bg:#0f1115;--surface:#171a21;--text:#f3f5f7;--muted:#9aa3b2;--line:#2a2f3a;--lime:#b9f000;--dark:#07080a}
+header.site{background:rgba(236,238,240,.92);color:#0f1115;border-bottom:0}
+header.site .burger:hover,header.site .pill-btn:hover{background:#dfe2e6}
+header.site .cart,header.site .pill-btn{background:#fff;color:#0f1115}
+header.site .cart .count{background:#0f1115;color:#fff}
+.drawer{background:#12151a;color:var(--text)}
+.btn{background:var(--lime);color:#0f1115}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+.card,details,.panel,.kpi{background:var(--surface);color:var(--text)}
+input,select,textarea{background:#0f1115;color:var(--text);border-color:var(--line)}
+.qty button,.tabs button,.media-tabs button{background:var(--surface);color:var(--text);border-color:var(--line)}
+.tabs button.on,.media-tabs button.on{background:var(--lime);color:#0f1115;border-color:var(--lime)}
+.notice{background:#1f2410;border-color:#44521a;color:#d8e8a0}
+.ok{background:#16260f;color:#c9f27a;border-color:#2f5a1a}
+.hero-img{background:var(--surface)}
+.page-title h1,.hero h1{font-style:italic;text-transform:uppercase;font-weight:900;letter-spacing:-.03em}
+.cart-line,.total-row{border-color:var(--line)}
+.bars i{background:var(--lime)}
+.panel[style*="#fff"]{color:#0f1115}
+h1,h2,h3,h4,strong,.prose,.block,.cart-line,.card h3{color:var(--text)}
+.panel[style*="#fff"] *{color:#0f1115}
+header.site *{color:#0f1115}

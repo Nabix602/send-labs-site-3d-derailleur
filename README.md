@@ -26,3 +26,10 @@ update public.profiles set role = 'admin' where email = 'votre@email.fr';
 
 ## Déploiement
 Chaque `git push` sur `main` redéploie automatiquement sur Vercel.
+
+
+## Boutique (checkout, livraison, QR, admin)
+- **Commande** : `panier.html` (prix, livraison, code promo recalculés côté serveur par `quote_order` / `place_order`). N° de commande `SL-1001…`.
+- **Paiement** : virement (instructions dans Admin > Livraison & promos) ; carte via Stripe (Edge Functions `create-checkout` + `stripe-webhook`, dossier `supabase/functions/`). Pour l'activer : secrets `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET` dans Supabase, webhook Stripe vers `https://<projet>.supabase.co/functions/v1/stripe-webhook` (événement `checkout.session.completed`), puis cocher « Activer le paiement par carte » dans l'admin.
+- **QR « Ta surprise »** : chaque commande a un jeton ; `bordereau.html?o=<id>` imprime le bon de préparation avec le QR, `etiquette.html` imprime des cartes (admin).
+- **Admin** : tableau de bord (à encaisser / à expédier / stock bas / export CSV), commandes, produits, drop, livraison & promos, points ambassadeurs.
