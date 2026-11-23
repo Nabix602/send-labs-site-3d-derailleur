@@ -3,7 +3,7 @@
   var S = window.SLapp, sb = S.sb, esc = S.esc, money = S.money;
   var root = document.getElementById("admin");
   var STATUS = { pending: "En attente de paiement", paid: "Payée", shipped: "Expédiée", cancelled: "Annulée" };
-  var tab = "orders";
+  var tab = "dash";
 
   function notice(msg, cls) { return '<div class="' + (cls || "notice") + '">' + esc(msg) + "</div>"; }
   function opt(value, label, cur) { return '<option value="' + esc(value) + '"' + (value === cur ? " selected" : "") + ">" + esc(label) + "</option>"; }
@@ -25,7 +25,7 @@
   }
 
   function tabsHtml() {
-    var names = { orders: "Commandes", products: "Produits", stock: "Stock", drop: "Drop", shop: "Livraison & promos", messages: "Messages", clients: "Clients", settings: "Réglages" };
+    var names = { dash: "Tableau de bord", orders: "Commandes", products: "Produits", stock: "Stock", drop: "Drop", shop: "Livraison & promos", messages: "Messages", clients: "Clients", settings: "Réglages" };
     return '<div class="tabs">' + Object.keys(names).map(function (k) {
       return '<button data-tab="' + k + '" class="' + (k === tab ? "on" : "") + '">' + names[k] + "</button>";
     }).join("") + '</div><div id="flash"></div><div id="tab-body"></div>';
@@ -33,13 +33,54 @@
   function body() { return document.getElementById("tab-body"); }
 
   var views = {
+    dash: function () {
+      return Promise.all([
+        sb.from("orders").select("id,order_number,created_at,status,total_cents,full_name,address,relay_point,shipping_method,carrier,tracking_number,ambassador_code,email,phone,subtotal_cents,discount_cents,discount_code,shipping_cents,paid_at,shipped_at").order("created_at", { ascending: false }).limit(500),
+        sb.from("products").select("name,stock,status").not("stock", "is", null).lte("stock", 3).eq("status", "published"),
+        sb.from("submissions").select("id", { count: "exact", head: true })
+      ]).then(function (r) {
+        var o = r[0].data || [], low = r[1].data || [], msgs = r[2].count || 0;
+        window.__orders = o;
+        var rev = 0, rev30 = 0, pend = [], paid = [], ship = 0, now = Date.now(), days = {};
+        o.forEach(function (x) {
+          if (x.status === "paid" || x.status === "shipped") {
+            rev += x.total_cents;
+            var t = new Date(x.paid_at || x.created_at).getTime();
+            if (now - t < 30 * 864e5) rev30 += x.total_cents;
+            var k = Math.floor((now - t) / 864e5); if (k < 14) days[k] = (days[k] || 0) + x.total_cents;
+          }
+          if (x.status === "pending") pend.push(x);
+          if (x.status === "paid") paid.push(x);
+          if (x.status === "shipped") ship++;
+        });
+        var max = 1; for (var k = 0; k < 14; k++) max = Math.max(max, days[k] || 0);
+        var bars = ""; for (var j = 13; j >= 0; j--) bars += '<i title="J-' + j + " : " + money(days[j] || 0) + '" style="height:' + Math.round((days[j] || 0) / max * 100) + '%"></i>';
+        function num(x) { return x.order_number ? "SL-" + x.order_number : x.id.slice(0, 8); }
+        var kp = function (v, l) { return '<div class="kpi"><b>' + v + "</b><span>" + l + "</span></div>"; };
+        var h = '<div class="kpis">' + kp(money(rev), "Encaissé (total)") + kp(money(rev30), "Encaissé (30 jours)") + kp(pend.length, "À encaisser (virements)") + kp(paid.length, "À expédier") + kp(ship, "Expédiées") + kp(o.length ? money(Math.round(rev / Math.max(1, o.filter(function (x) { return x.status === "paid" || x.status === "shipped"; }).length))) : "—", "Panier moyen") + kp(msgs, "Messages / formulaires") + "</div>";
+        h += '<div class="panel"><h3>Encaissements, 14 derniers jours</h3><div class="bars">' + bars + '</div></div>';
+        h += '<div class="panel"><h3>1. À encaisser (' + pend.length + ")</h3>" + (pend.length ? pend.map(function (x) {
+          return '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)"><span><strong>' + esc(num(x)) + "</strong> · " + esc(x.full_name || "") + " · " + money(x.total_cents) + " · " + esc(S.dateFr(x.created_at)) +
+            '</span><span><button class="btn small" data-action="mark-paid" data-id="' + esc(x.id) + '">Virement reçu</button> <button class="btn small ghost" data-action="mark-cancel" data-id="' + esc(x.id) + '">Annuler</button></span></div>';
+        }).join("") : "<p>Rien en attente.</p>") + "</div>";
+        h += '<div class="panel"><h3>2. À expédier (' + paid.length + ")</h3>" + (paid.length ? paid.map(function (x) {
+          return '<div style="padding:8px 0;border-bottom:1px solid var(--line)"><strong>' + esc(num(x)) + "</strong> · " + esc(x.full_name || "") + " · " + money(x.total_cents) + "<br><small>" + esc(x.shipping_method || "") + (x.relay_point ? " → " + esc(x.relay_point) : "") + "</small>" +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><input data-d-carrier="' + esc(x.id) + '" placeholder="Transporteur" value="Mondial Relay" size="14"><input data-d-track="' + esc(x.id) + '" placeholder="N° de suivi / expédition" size="22">' +
+            '<button class="btn small" data-action="mark-shipped" data-id="' + esc(x.id) + '">Expédiée</button> <a class="btn small ghost" target="_blank" href="bordereau.html?o=' + esc(x.id) + '">Bon de préparation + QR</a></div></div>';
+        }).join("") : "<p>Rien à expédier.</p>") + "</div>";
+        h += '<div class="panel"><h3>Stock bas</h3>' + (low.length ? low.map(function (p) { return "<p>" + esc(p.name) + " : <strong>" + p.stock + "</strong></p>"; }).join("") : "<p>RAS (seuls les produits avec stock suivi sont contrôlés).</p>") + "</div>";
+        h += '<div class="panel"><h3>Exports</h3><button class="btn small" data-action="export-csv">Télécharger les commandes (CSV pour Excel / comptabilité)</button></div>';
+        body().innerHTML = h;
+      });
+    },
+
     orders: function () {
       return sb.from("orders").select("*, order_items(*)").order("created_at", { ascending: false }).limit(100).then(function (r) {
         if (r.error) { body().innerHTML = notice("Lecture impossible."); return; }
         if (!r.data.length) { body().innerHTML = notice("Aucune commande pour le moment."); return; }
         body().innerHTML = r.data.map(function (o) {
           var items = (o.order_items || []).map(function (i) { return esc(i.quantity) + " × " + esc(i.name) + " (" + money(i.unit_price_cents) + ")"; }).join("<br>");
-          return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>Commande ' + esc(o.id.slice(0, 8)) + "</strong><span>" + esc(S.dateFr(o.created_at)) + "</span></div>" +
+          return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>Commande ' + esc(o.order_number ? "SL-" + o.order_number : o.id.slice(0, 8)) + "</strong><span>" + esc(S.dateFr(o.created_at)) + "</span></div>" +
             "<p><strong>" + esc(o.full_name || "") + "</strong> · " + esc(o.phone || "") + "<br>" + esc(o.address || "").replace(/\n/g, "<br>") + "</p>" +
             (o.note ? '<p style="color:var(--muted)">Note : ' + esc(o.note) + "</p>" : "") + "<p>" + items + "</p>" +
             "<p>Livraison : " + esc(o.shipping_method || "—") + " (" + money(o.shipping_cents || 0) + ")" + (o.relay_point ? " — <strong>Relais : " + esc(o.relay_point) + "</strong>" : "") +
@@ -235,6 +276,28 @@
     } else if (e.target.id === "pay-form") {
       e.preventDefault();
       sb.from("site_settings").upsert({ key: "payment_instructions", value: e.target.v.value }).then(function (x) { flash(x.error ? "Enregistrement impossible." : "Instructions enregistrées.", !x.error); });
+    }
+  });
+
+  function csvCell(v) { v = v == null ? "" : String(v); return '"' + v.replace(/"/g, '""').replace(/\r?\n/g, " ") + '"'; }
+  root.addEventListener("click", function (e) {
+    var a = e.target.closest("[data-action]");
+    if (!a) return;
+    var act = a.getAttribute("data-action"), id = a.getAttribute("data-id");
+    function done(r, m) { if (r.error) flash("Impossible : " + r.error.message); else { show("dash"); flash(m, true); } }
+    if (act === "mark-paid") sb.from("orders").update({ status: "paid", payment_provider: "virement" }).eq("id", id).then(function (r) { done(r, "Commande marquée payée : le client peut recevoir sa surprise."); });
+    else if (act === "mark-cancel") { if (confirm("Annuler cette commande ? Le stock sera remis.")) sb.from("orders").update({ status: "cancelled" }).eq("id", id).then(function (r) { done(r, "Commande annulée."); }); }
+    else if (act === "mark-shipped") {
+      var c = root.querySelector('[data-d-carrier="' + id + '"]').value.trim() || null, t = root.querySelector('[data-d-track="' + id + '"]').value.trim() || null;
+      sb.from("orders").update({ status: "shipped", carrier: c, tracking_number: t }).eq("id", id).then(function (r) { done(r, "Commande expédiée."); });
+    } else if (act === "export-csv") {
+      var rows = [["Numéro", "Date", "Statut", "Nom", "E-mail", "Téléphone", "Adresse", "Livraison", "Point relais", "Transporteur", "Suivi", "Sous-total €", "Réduction €", "Code", "Port €", "Total €", "Ambassadeur"]];
+      (window.__orders || []).forEach(function (x) {
+        rows.push(["SL-" + x.order_number, x.created_at, x.status, x.full_name, x.email, x.phone, x.address, x.shipping_method, x.relay_point, x.carrier, x.tracking_number,
+          (x.subtotal_cents || 0) / 100, (x.discount_cents || 0) / 100, x.discount_code, (x.shipping_cents || 0) / 100, x.total_cents / 100, x.ambassador_code].map(csvCell));
+      });
+      var blob = new Blob(["﻿" + rows.map(function (r) { return r.join(";"); }).join("\r\n")], { type: "text/csv;charset=utf-8" });
+      var l = document.createElement("a"); l.href = URL.createObjectURL(blob); l.download = "commandes-sendlabs.csv"; document.body.appendChild(l); l.click(); l.remove();
     }
   });
 

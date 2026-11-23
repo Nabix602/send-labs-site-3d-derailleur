@@ -16,7 +16,7 @@
       var items = (o.order_items || []).map(function (i) {
         return esc(i.quantity) + " × " + esc(i.name) + " (" + money(i.unit_price_cents) + ")";
       }).join("<br>");
-      return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>Commande ' + esc(o.id.slice(0, 8)) +
+      return '<div class="panel"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>Commande ' + esc(o.order_number ? "SL-" + o.order_number : o.id.slice(0, 8)) +
         '</strong><span class="status">' + esc(STATUS[o.status] || o.status) + "</span></div>" +
         '<p style="color:var(--muted);font-size:.85rem">' + esc(S.dateFr(o.created_at)) + "</p><p>" + items + "</p>" +
         (o.discount_cents ? "<p>Réduction " + esc(o.discount_code || "") + " : −" + money(o.discount_cents) + "</p>" : "") +
@@ -258,8 +258,8 @@
           }
           var html = c.map(function (i) {
             return '<div class="cart-line"><div><strong>' + esc(i.name) + '</strong><div style="color:var(--muted);font-size:.85rem">' + money(i.price) + '</div></div>' +
-              '<div class="qty"><button data-q="' + esc(i.id) + '" data-d="-1" aria-label="Moins">−</button><span>' + i.qty + '</span><button data-q="' + esc(i.id) + '" data-d="1" aria-label="Plus">+</button></div>' +
-              "<strong>" + money(i.price * i.qty) + '</strong><button class="btn small ghost" data-rm="' + esc(i.id) + '">Retirer</button></div>';
+              '<div class="qty"><button type="button" data-q="' + esc(i.id) + '" data-d="-1" aria-label="Moins">−</button><span>' + i.qty + '</span><button type="button" data-q="' + esc(i.id) + '" data-d="1" aria-label="Plus">+</button></div>' +
+              "<strong>" + money(i.price * i.qty) + '</strong><button type="button" class="btn small ghost" data-rm="' + esc(i.id) + '">Retirer</button></div>';
           }).join("");
           return session().then(function (s) {
             if (!s) {
@@ -275,7 +275,7 @@
             ]).then(function (r) {
               ship = r[1].data || []; payInfo = (r[2].data && r[2].data.value) || "";
               var gift = onlyGift();
-              html += '<form id="checkout" style="margin-top:24px"><h2 style="text-align:left;font-size:1.3rem">Livraison</h2>' +
+              html = '<form id="checkout" class="co-grid"><div class="co-main">' + html + '<h2 style="text-align:left;font-size:1.3rem;margin-top:26px">Livraison</h2>' +
                 '<label>Nom complet<input name="full_name" required maxlength="120" value="' + esc((r[0].data && r[0].data.full_name) || "") + '"></label>' +
                 '<label>Téléphone<input name="phone" maxlength="30" inputmode="tel"></label>' +
                 '<label>' + (gift ? "Adresse (facturation)" : "Adresse de livraison") + '<textarea name="address" rows="3" required maxlength="400"></textarea></label>';
@@ -288,12 +288,15 @@
                 '<div id="relay-box"><label>Ton point relais<input name="relay" maxlength="200" placeholder="Nom du point, adresse, ville (ou n° du relais)"></label>' +
                 '<small style="color:var(--muted)">Cherche le point le plus proche sur <a href="https://www.mondialrelay.fr/" target="_blank" rel="noopener" style="text-decoration:underline">mondialrelay.fr</a> et recopie son nom et son adresse.</small></div>';
               }
-              html += '<label>Code promo<span style="display:flex;gap:8px"><input name="code" maxlength="30" value="' + esc(code) + '" style="text-transform:uppercase"><button class="btn small ghost" type="button" id="apply-code">Appliquer</button></span></label><div id="code-msg"></div>' +
-                '<label>Note (facultatif)<textarea name="note" rows="2" maxlength="400"></textarea></label>' +
-                '<div id="recap" style="margin:18px 0"></div>' +
-                '<div class="notice"><strong>Paiement par virement.</strong> Après validation, tu reçois les coordonnées bancaires ici et dans ton espace client. La commande est expédiée dès réception du virement.' +
-                (payInfo ? '<br>' + esc(payInfo).replace(/\n/g, "<br>") : "") + "</div>" +
-                '<button class="btn" type="submit">Valider la commande</button><div class="form-error" id="co-err"></div></form>';
+              html += '<label>Note pour l\'atelier (facultatif)<textarea name="note" rows="2" maxlength="400"></textarea></label></div>' +
+                '<aside class="co-side panel"><h3>Récapitulatif</h3>' +
+                '<label>Code promo<span style="display:flex;gap:8px"><input name="code" maxlength="30" value="' + esc(code) + '" style="text-transform:uppercase"><button class="btn small ghost" type="button" id="apply-code">Appliquer</button></span></label><div id="code-msg"></div>' +
+                '<div id="recap" style="margin:10px 0"></div><h3>Comment tu paies</h3>' +
+                '<label class="pay-opt"><input type="radio" name="pay" checked> <span><strong>Virement bancaire</strong><br><small style="color:var(--muted)">Coordonnées affichées après la commande. Expédition dès réception.</small></span></label>' +
+                '<div class="pay-opt off"><input type="radio" disabled> <span><strong>Carte bancaire</strong> <small>(bientôt)</small></span></div>' +
+                (payInfo ? '<p style="font-size:.85rem;color:var(--muted)">' + esc(payInfo).replace(/\n/g, "<br>") + "</p>" : "") +
+                '<button class="btn" type="submit" style="width:100%">Valider la commande</button><div class="form-error" id="co-err"></div>' +
+                '<p style="font-size:.8rem;color:var(--muted)">Un numéro de commande et un suivi te sont donnés dans ton espace client.</p></aside></form>';
               view().innerHTML = html;
               return recap();
             });
@@ -337,10 +340,13 @@
             if (r.error) { btn.disabled = false; err.textContent = "Commande impossible : " + r.error.message; return; }
             S.writeCart([]);
             try { localStorage.removeItem("sl_code"); } catch (er) {}
-            view().innerHTML = '<div class="ok"><strong>Commande enregistrée (n° ' + esc(String(r.data).slice(0, 8)) + ').</strong><br>' +
+            sb.from("orders").select("order_number,total_cents").eq("id", r.data).maybeSingle().then(function (o) {
+            var num = o.data ? "SL-" + o.data.order_number : String(r.data).slice(0, 8);
+            view().innerHTML = '<div class="ok"><strong>Commande enregistrée : ' + esc(num) + (o.data ? " — " + money(o.data.total_cents) : "") + '.</strong><br>' +
               "Règle le montant par virement en indiquant ce numéro en référence." + (payInfo ? "<br><br>" + esc(payInfo).replace(/\n/g, "<br>") : "<br>Les coordonnées bancaires te sont envoyées par l'atelier.") +
               "<br><br>Suis ta commande dans ton espace client.</div>" +
               '<p style="text-align:center;margin-top:20px"><a class="btn" href="compte.html">Voir mes commandes</a></p>';
+            });
           });
         });
 

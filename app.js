@@ -211,7 +211,7 @@
   }
 
   /* ---------- Verrouillage du site pendant l'attente d'un drop ---------- */
-  var OPEN_PAGES = ["connexion", "admin", "stock", "compte", "cgv", "mentions-legales", "confidentialite", "remboursement", "ta-surprise", "etiquette"];
+  var OPEN_PAGES = ["connexion", "admin", "stock", "compte", "cgv", "mentions-legales", "confidentialite", "remboursement", "ta-surprise", "etiquette", "bordereau"];
   function pageName() { var m = location.pathname.match(/([^\/]+?)(\.html)?$/); return m ? m[1] : "index"; }
   function buildMarquee(el, items) {
     function group(hidden) {

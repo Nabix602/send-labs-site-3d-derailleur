@@ -6,9 +6,13 @@ Quand tu reprends cette session : lis ce fichier, fais les points non cochés da
 - [x] Base : livraison (Mondial Relay relais 4,90 €), codes promo (MERCI10), devis serveur `quote_order`, `place_order`, cartes surprise (jeton 16 car. par commande), `claim_surprise`, `get_surprise`, `set_surprise_ambassador`, stock remis si commande annulée, suivi colis
 - [x] Checkout (panier.html) : livraison + point relais saisi à la main + code promo + virement
 - [x] Page « Ta surprise » (QR par colis) + `etiquette.html` (cartes A4 imprimables avec QR, admin)
+- [x] N° de commande SL-1001…, checkout 2 colonnes (récap + paiement à droite), tableau de bord admin (KPIs, à encaisser, à expédier, stock bas, export CSV), bon de préparation avec QR (`bordereau.html`), bandeau défilant plus rapide
 - [x] Admin : commandes (relais, suivi, statut), onglet Livraison & promos (codes, points ambassadeurs, instructions de virement)
 
 ## À faire (Claude)
+- [ ] E-mails automatiques (confirmation, expédition) : Edge Function + Resend (gratuit 3000/mois, clé à fournir par Esteban) — non faits
+- [ ] Lien de suivi Mondial Relay cliquable (format d'URL à vérifier)
+- [ ] Appliquer le style sombre « lime & noir » (captures Shopify) au site Vercel
 - [ ] Test navigateur complet (panier → commande → admin « payée » → QR → code MERCI-xxxxxx)
 - [ ] Paiement par carte Stripe (Edge Functions `create-checkout` + `stripe-webhook`, sans abonnement : 1,5 % + 0,25 € par paiement ; clés à mettre par Esteban dans Supabase)
 - [ ] Widget officiel Mondial Relay (nécessite code enseigne Mondial Relay ; sinon saisie manuelle)
