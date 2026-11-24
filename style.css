@@ -267,3 +267,16 @@ header.site .hdr>div:first-child{display:none}
 @media(max-width:899px){header.site .hdr{margin:8px 10px;grid-template-columns:auto 1fr auto}header.site .hdr>div:first-child{display:block}header.site .logo{justify-self:center}}
 .bf-bar{background:#0f1115;color:#fff;text-align:center;font-weight:700;font-size:.95rem;padding:8px 12px}.bf-bar:empty{display:none}.bf-bar b{color:#b9f000;font-family:ui-monospace,Menlo,monospace;font-size:1.1rem;margin-left:8px}
 .empty-cart{text-align:center;padding:50px 0}.empty-cart svg{opacity:.7}.empty-cart p{color:var(--muted)}.empty-cart .btn{padding:8px 18px;border-radius:99px;text-transform:none;letter-spacing:0}
+
+.demarche img.ph{width:100%;height:100%;object-fit:cover;background:var(--surface)}
+.fallback{object-fit:contain!important;padding:24%;background:linear-gradient(135deg,#1b1f27,#0f1115)}
+/* Checkout plus net */
+.co-main label,.co-side label:not(.pay-opt):not(.check){display:block;margin-top:16px;font-weight:600;font-size:.85rem;color:var(--muted)}
+.co-main label input,.co-main label textarea,.co-side label input{display:block;width:100%;margin-top:6px;font-weight:400;color:var(--text)}
+.co-main label.check{display:flex;gap:10px;align-items:flex-start;color:var(--text);font-size:.95rem;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.co-main label.check input{width:auto;margin-top:4px}
+.co-main h2{margin-top:30px}
+.cart-line{grid-template-columns:1fr auto auto auto;align-items:center}.cart-line>strong:nth-of-type(2){white-space:nowrap}
+.co-side{padding:22px}.co-side .total-row{padding:10px 0;font-size:1.05rem}
+.co-side .btn{margin-top:14px;padding:16px}
+#relay-box{margin-top:6px}

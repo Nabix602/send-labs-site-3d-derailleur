@@ -63,7 +63,7 @@
   }
   function productCard(p) {
     var u = safeUrl(p.image_url);
-    var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0));
+    var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : '<img class="fallback" src="logo.png" alt="" loading="lazy">';
     var ext = p.status === "published" ? extUrl(p.external_url) : "";
     var buy = ext ? extBtn(ext, "small") : soldOut(p) ? '<button class="btn small" disabled>Épuisé</button>' : (p.status === "soon" || p.price_cents == null)
       ? '<a class="btn small ghost" href="contact.html">Être prévenu</a>'
@@ -110,7 +110,7 @@
   }
   function dropCard(p, live) {
     var u = safeUrl(p.image_url);
-    var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : esc(p.name.charAt(0));
+    var img = u ? '<img src="' + esc(u) + '" alt="' + esc(p.name) + '" loading="lazy">' : '<img class="fallback" src="logo.png" alt="" loading="lazy">';
     var buy = !live
       ? '<button class="btn small" disabled>Pas encore ouvert</button>'
       : soldOut(p) ? '<button class="btn small" disabled>Épuisé</button>'
