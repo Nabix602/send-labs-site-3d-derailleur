@@ -29,3 +29,4 @@ Quand tu reprends cette session : lis ce fichier, fais les points non cochés da
 - [ ] Mettre les vrais stocks (tous à 0 / non suivis), e-mail de contact réel (config.js)
 - [ ] Statut juridique (micro-entreprise) avant la 1re vente
 - [ ] Esteban : créer compte Stripe + secrets + webhook (optionnel)
+- [ ] Boxtal : intégration API non faite (documentation non lisible ici, identifiants requis) ; en attendant bouton « Copier pour Boxtal » dans l'admin

@@ -66,7 +66,7 @@
         h += '<div class="panel"><h3>2. À expédier (' + paid.length + ")</h3>" + (paid.length ? paid.map(function (x) {
           return '<div style="padding:8px 0;border-bottom:1px solid var(--line)"><strong>' + esc(num(x)) + "</strong> · " + esc(x.full_name || "") + " · " + money(x.total_cents) + "<br><small>" + esc(x.shipping_method || "") + (x.relay_point ? " → " + esc(x.relay_point) : "") + "</small>" +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><input data-d-carrier="' + esc(x.id) + '" placeholder="Transporteur" value="Mondial Relay" size="14"><input data-d-track="' + esc(x.id) + '" placeholder="N° de suivi / expédition" size="22">' +
-            '<button class="btn small" data-action="mark-shipped" data-id="' + esc(x.id) + '">Expédiée</button> <a class="btn small ghost" target="_blank" href="bordereau.html?o=' + esc(x.id) + '">Bon de préparation + QR</a></div></div>';
+            '<button class="btn small" data-action="mark-shipped" data-id="' + esc(x.id) + '">Expédiée</button> <a class="btn small ghost" target="_blank" href="bordereau.html?o=' + esc(x.id) + '">Bon de préparation + QR</a> <button class="btn small ghost" data-action="copy-boxtal" data-id="' + esc(x.id) + '">Copier pour Boxtal</button> <a class="btn small ghost" target="_blank" rel="noopener" href="https://www.boxtal.com/fr/fr">Ouvrir Boxtal</a></div></div>';
         }).join("") : "<p>Rien à expédier.</p>") + "</div>";
         h += '<div class="panel"><h3>Stock bas</h3>' + (low.length ? low.map(function (p) { return "<p>" + esc(p.name) + " : <strong>" + p.stock + "</strong></p>"; }).join("") : "<p>RAS (seuls les produits avec stock suivi sont contrôlés).</p>") + "</div>";
         h += '<div class="panel"><h3>Exports</h3><button class="btn small" data-action="export-csv">Télécharger les commandes (CSV pour Excel / comptabilité)</button></div>';
@@ -293,6 +293,12 @@
     var act = a.getAttribute("data-action"), id = a.getAttribute("data-id");
     function done(r, m) { if (r.error) flash("Impossible : " + r.error.message); else { show("dash"); flash(m, true); } }
     if (act === "mark-paid") sb.from("orders").update({ status: "paid", payment_provider: "virement" }).eq("id", id).then(function (r) { done(r, "Commande marquée payée : le client peut recevoir sa surprise."); });
+    else if (act === "copy-boxtal") {
+      var x = (window.__orders || []).filter(function (q) { return q.id === id; })[0];
+      if (!x) return;
+      var txt = "Destinataire : " + x.full_name + "\nAdresse : " + String(x.address || "").replace(/\n/g, ", ") + "\nTéléphone : " + (x.phone || "") + "\nE-mail : " + (x.email || "") + (x.relay_point ? "\nPoint relais : " + x.relay_point : "") + "\nRéférence : SL-" + x.order_number;
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { flash("Infos copiées : colle-les dans Boxtal, achète l'étiquette, puis reviens saisir le n° de suivi.", true); }, function () { prompt("Copie ces infos :", txt); });
+    }
     else if (act === "mark-cancel") { if (confirm("Annuler cette commande ? Le stock sera remis.")) sb.from("orders").update({ status: "cancelled" }).eq("id", id).then(function (r) { done(r, "Commande annulée."); }); }
     else if (act === "mark-shipped") {
       var c = root.querySelector('[data-d-carrier="' + id + '"]').value.trim() || null, t = root.querySelector('[data-d-track="' + id + '"]').value.trim() || null;
