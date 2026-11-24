@@ -18,6 +18,7 @@ Quand tu reprends cette session : lis ce fichier, fais les points non cochés da
 - [ ] Widget officiel Mondial Relay (nécessite code enseigne Mondial Relay ; sinon saisie manuelle)
 - [x] Admin : ajout de modes de livraison
 - [ ] Table `ambassadors` pour valider les codes ambassadeurs
+- [x] Photos Send Cage (3, issues des captures Shopify)
 - [ ] Page carte cadeau au style du site ; pages légales (CGV, mentions, remboursement) à compléter
 - [x] README
 
