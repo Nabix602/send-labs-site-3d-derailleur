@@ -280,3 +280,4 @@ header.site .hdr>div:first-child{display:none}
 .co-side{padding:22px}.co-side .total-row{padding:10px 0;font-size:1.05rem}
 .co-side .btn{margin-top:14px;padding:16px}
 #relay-box{margin-top:6px}
+.co-side label.pay-opt input,.co-main label.check input{width:auto!important;margin:3px 0 0}.co-side label.pay-opt{margin-top:8px}
