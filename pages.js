@@ -253,7 +253,7 @@
         function draw() {
           var c = lines();
           if (!c.length) {
-            view().innerHTML = notice("Ton panier est vide.") + '<p style="text-align:center;margin-top:20px"><a class="btn" href="boutique.html">Voir la boutique</a></p>';
+            view().innerHTML = '<div class="empty-cart"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><h2 style="font-size:1.2rem;font-weight:500">Votre panier est vide.</h2><p>Il semble que vous n\'ayez encore rien ajouté à votre panier.</p><p style="margin-top:18px"><a class="btn" href="boutique.html">Continuer les achats</a></p></div>';
             return Promise.resolve();
           }
           var html = c.map(function (i) {
@@ -292,8 +292,8 @@
                 '<aside class="co-side panel"><h3>Récapitulatif</h3>' +
                 '<label>Code promo<span style="display:flex;gap:8px"><input name="code" maxlength="30" value="' + esc(code) + '" style="text-transform:uppercase"><button class="btn small ghost" type="button" id="apply-code">Appliquer</button></span></label><div id="code-msg"></div>' +
                 '<div id="recap" style="margin:10px 0"></div><h3>Comment tu paies</h3>' +
-                '<label class="pay-opt"><input type="radio" name="pay" value="virement" checked> <span><strong>Virement bancaire</strong><br><small style="color:var(--muted)">Coordonnées affichées après la commande. Expédition dès réception.</small></span></label>' +
-                (cardOn ? '<label class="pay-opt"><input type="radio" name="pay" value="card"> <span><strong>Carte bancaire</strong><br><small style="color:var(--muted)">Paiement sécurisé par Stripe.</small></span></label>' : '<div class="pay-opt off"><input type="radio" disabled> <span><strong>Carte bancaire</strong> <small>(bientôt)</small></span></div>') +
+                '<label class="pay-opt"><input type="radio" name="pay" value="virement"' + (cardOn ? '' : ' checked') + '> <span><strong>Virement bancaire</strong><br><small style="color:var(--muted)">Coordonnées affichées après la commande. Expédition dès réception.</small></span></label>' +
+                (cardOn ? '<label class="pay-opt"><input type="radio" name="pay" value="card" checked> <span><strong>Carte bancaire</strong><br><small style="color:var(--muted)">Paiement sécurisé par Stripe.</small></span></label>' : '<div class="pay-opt off"><input type="radio" disabled> <span><strong>Carte bancaire</strong> <small>(bientôt)</small></span></div>') +
                 (payInfo ? '<p style="font-size:.85rem;color:var(--muted)">' + esc(payInfo).replace(/\n/g, "<br>") + "</p>" : "") +
                 '<button class="btn" type="submit" style="width:100%">Valider la commande</button><div class="form-error" id="co-err"></div>' +
                 '<p style="font-size:.8rem;color:var(--muted)">Un numéro de commande et un suivi te sont donnés dans ton espace client.</p></aside></form>';

@@ -127,18 +127,39 @@
     });
   }
 
+  /* ---------- Compte à rebours promo (Black Friday) ---------- */
+  function startCountdown() {
+    var el = document.getElementById("bf-bar");
+    if (!el) return;
+    sb.from("site_settings").select("key,value").in("key", ["sale_enabled", "sale_label", "sale_starts_at", "sale_ends_at"]).then(function (r) {
+      var c = {}; (r.data || []).forEach(function (x) { c[x.key] = x.value; });
+      if (c.sale_enabled !== "1" || !c.sale_ends_at) return;
+      var st = c.sale_starts_at ? Date.parse(c.sale_starts_at) : 0, en = Date.parse(c.sale_ends_at), label = c.sale_label || "Promo";
+      if (isNaN(en)) return;
+      function p(n) { return n < 10 ? "0" + n : "" + n; }
+      function tick() {
+        var now = Date.now(), target = now < st ? st : en;
+        if (now >= en) { el.textContent = ""; return clearInterval(t); }
+        var d = Math.max(0, target - now), j = Math.floor(d / 864e5), hh = Math.floor(d % 864e5 / 36e5), m = Math.floor(d % 36e5 / 6e4), sec = Math.floor(d % 6e4 / 1e3);
+        el.innerHTML = esc(label) + (now < st ? " commence dans " : " se termine dans ") + '<b>' + (j ? j + " j " : "") + p(hh) + ":" + p(m) + ":" + p(sec) + "</b>";
+      }
+      var t = setInterval(tick, 1000); tick();
+    });
+  }
+
   /* ---------- En-tête et pied de page ---------- */
   function renderChrome() {
     var h = document.getElementById("site-header");
     if (h) {
       h.className = "site";
-      h.innerHTML = '<div class="announce" id="announce"></div><div class="wrap hdr">' +
+      h.innerHTML = '<div class="bf-bar" id="bf-bar"></div><div class="announce" id="announce"></div><div class="wrap hdr">' +
         '<div><button class="burger" id="burger" aria-label="Ouvrir le menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>' +
         '<a class="logo" href="index.html" aria-label="SendLabs, accueil"><img src="logo.png" alt="SendLabs" width="154" height="44"></a>' +
         '<nav class="dnav" aria-label="Navigation"><a href="index.html">Accueil</a><a href="boutique.html">Catalogue</a><a href="ambassadeurs.html">Ambassadeurs</a><a href="faq.html">FAQ</a><a href="contact.html">Contact</a></nav>' +
         '<div class="hdr-right"><a class="cart" href="panier.html" aria-label="Panier"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/></svg><span class="count" id="cart-count"></span></a>' +
         '<a class="pill-btn" id="auth-link" href="connexion.html">Se connecter</a></div></div>';
 
+      startCountdown();
       var scrim = document.createElement("div");
       scrim.className = "scrim";
       var drawer = document.createElement("nav");

@@ -265,3 +265,5 @@ header.site .hdr>div:first-child{display:none}
 .dnav a:hover{text-decoration:underline;text-underline-offset:6px}
 @media(min-width:900px){.dnav{display:flex}}
 @media(max-width:899px){header.site .hdr{margin:8px 10px;grid-template-columns:auto 1fr auto}header.site .hdr>div:first-child{display:block}header.site .logo{justify-self:center}}
+.bf-bar{background:#0f1115;color:#fff;text-align:center;font-weight:700;font-size:.95rem;padding:8px 12px}.bf-bar:empty{display:none}.bf-bar b{color:#b9f000;font-family:ui-monospace,Menlo,monospace;font-size:1.1rem;margin-left:8px}
+.empty-cart{text-align:center;padding:50px 0}.empty-cart svg{opacity:.7}.empty-cart p{color:var(--muted)}.empty-cart .btn{padding:8px 18px;border-radius:99px;text-transform:none;letter-spacing:0}
