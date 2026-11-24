@@ -245,6 +245,8 @@
               (q.discount ? '<div class="total-row"><span>Réduction ' + esc(q.discount_code) + "</span><span>−" + money(q.discount) + "</span></div>" : "") +
               (q.only_gift ? "" : '<div class="total-row"><span>Livraison</span><span>' + (q.shipping_method ? (q.shipping ? money(q.shipping) : "Offerte") : "—") + "</span></div>") +
               '<div class="total-row"><strong>Total TTC</strong><strong>' + money(q.total) + "</strong></div>";
+            var pb = document.getElementById("pay-btn");
+            if (pb) pb.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:8px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Valider et payer ' + money(q.total);
             var rel = document.getElementById("relay-box");
             if (rel) rel.hidden = !q.requires_relay;
           });
@@ -257,7 +259,8 @@
             return Promise.resolve();
           }
           var html = c.map(function (i) {
-            return '<div class="cart-line"><div><strong>' + esc(i.name) + '</strong><div style="color:var(--muted);font-size:.85rem">' + money(i.price) + '</div></div>' +
+            var th = S.safeUrl(map[i.id].image_url);
+            return '<div class="cart-line"><div style="display:flex;gap:12px;align-items:center">' + (th ? '<img class="th" src="' + esc(th) + '" alt="">' : "") + '<div><strong>' + esc(i.name) + '</strong><div style="color:var(--muted);font-size:.85rem">' + money(i.price) + '</div></div></div>' +
               '<div class="qty"><button type="button" data-q="' + esc(i.id) + '" data-d="-1" aria-label="Moins">−</button><span>' + i.qty + '</span><button type="button" data-q="' + esc(i.id) + '" data-d="1" aria-label="Plus">+</button></div>' +
               "<strong>" + money(i.price * i.qty) + '</strong><button type="button" class="btn small ghost" data-rm="' + esc(i.id) + '">Retirer</button></div>';
           }).join("");
@@ -293,9 +296,9 @@
                 '<label>Code promo<span style="display:flex;gap:8px"><input name="code" maxlength="30" value="' + esc(code) + '" style="text-transform:uppercase"><button class="btn small ghost" type="button" id="apply-code">Appliquer</button></span></label><div id="code-msg"></div>' +
                 '<div id="recap" style="margin:10px 0"></div><h3>Comment tu paies</h3>' +
                 '<label class="pay-opt"><input type="radio" name="pay" value="virement"' + (cardOn ? '' : ' checked') + '> <span><strong>Virement bancaire</strong><br><small style="color:var(--muted)">Coordonnées affichées après la commande. Expédition dès réception.</small></span></label>' +
-                (cardOn ? '<label class="pay-opt"><input type="radio" name="pay" value="card" checked> <span><strong>Carte bancaire</strong><br><small style="color:var(--muted)">Paiement sécurisé par Stripe.</small></span></label>' : '<div class="pay-opt off"><input type="radio" disabled> <span><strong>Carte bancaire</strong> <small>(bientôt)</small></span></div>') +
+                (cardOn ? '<label class="pay-opt"><input type="radio" name="pay" value="card" checked> <span><strong>Carte bancaire, Apple Pay, Google Pay</strong><br><small style="color:var(--muted)">Paiement sécurisé par Stripe : tu saisis ta carte sur leur page.</small></span></label>' : '<div class="pay-opt off"><input type="radio" disabled> <span><strong>Carte bancaire</strong> <small>(bientôt)</small></span></div>') +
                 (payInfo ? '<p style="font-size:.85rem;color:var(--muted)">' + esc(payInfo).replace(/\n/g, "<br>") + "</p>" : "") +
-                '<button class="btn" type="submit" style="width:100%">Valider la commande</button><div class="form-error" id="co-err"></div>' +
+                '<button class="btn" type="submit" id="pay-btn" style="width:100%">Valider la commande</button><div class="form-error" id="co-err"></div>' +
                 '<p style="font-size:.8rem;color:var(--muted)">Un numéro de commande et un suivi te sont donnés dans ton espace client.</p></aside></form>';
               view().innerHTML = html;
               return recap();

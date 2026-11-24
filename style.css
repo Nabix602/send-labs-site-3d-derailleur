@@ -281,3 +281,4 @@ header.site .hdr>div:first-child{display:none}
 .co-side .btn{margin-top:14px;padding:16px}
 #relay-box{margin-top:6px}
 .co-side label.pay-opt input,.co-main label.check input{width:auto!important;margin:3px 0 0}.co-side label.pay-opt{margin-top:8px}
+.th{width:64px;height:64px;object-fit:cover;border-radius:12px;background:var(--surface);flex:none}
